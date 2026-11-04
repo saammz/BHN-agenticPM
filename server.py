@@ -19,7 +19,7 @@ from datetime import datetime
 from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, Dict, Optional
-from urllib.parse import parse_qs, quote, urlparse
+from urllib.parse import parse_qs, parse_qsl, quote, urlencode, urlparse
 
 from agent.actions import create_dispute, decide_dispute, decide_review
 from agent.audit import CATEGORIES, clear_context, set_context
@@ -191,7 +191,17 @@ class Handler(BaseHTTPRequestHandler):
         auth.state.audit("access.denied", outcome="denied", target_type="endpoint",
                          target_id=f"{self.command} {urlparse(self.path).path}"[:80], summary=reason, status=status)
 
+    def _restore_path(self) -> None:
+        """On Vercel every request is rewritten to /api/index?__path=/<original>; put the original path back."""
+        parts = urlparse(self.path)
+        if parts.path.rstrip("/") in ("/api/index", "/api/index.py") and "__path=" in parts.query:
+            params = parse_qsl(parts.query, keep_blank_values=True)
+            original = next((v for k, v in params if k == "__path"), "/") or "/"
+            rest = [(k, v) for k, v in params if k != "__path"]
+            self.path = "/" + original.lstrip("/") + (("?" + urlencode(rest)) if rest else "")
+
     def handle_errors(self, fn):
+        self._restore_path()
         clear_context()
         set_context(ip=self.ip(), user_agent=self.ua())
         self._status, self._user, self._err = None, None, None

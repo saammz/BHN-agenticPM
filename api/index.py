@@ -1,5 +1,5 @@
-"""Vercel entry point. Vercel's Python runtime serves any BaseHTTPRequestHandler subclass named `handler`;
-vercel.json rewrites every path here, and the app's own router takes it from there."""
+"""Vercel entry point. Vercel's Python runtime serves any BaseHTTPRequestHandler subclass named `handler`.
+vercel.json rewrites every path to /api/index?__path=/<original path>; Handler._restore_path puts it back."""
 import os
 import sys
 

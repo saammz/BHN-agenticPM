@@ -3,9 +3,19 @@
   "functions": {
     "api/index.py": {
       "maxDuration": 300,
-      "includeFiles": "{agent,ui,data}/**"
+      "includeFiles": "**"
     }
   },
-  "rewrites": [{ "source": "/(.*)", "destination": "/api/index" }],
-  "crons": [{ "path": "/api/cron/daily", "schedule": "0 7 * * *" }]
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/api/index?__path=/$1"
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/daily",
+      "schedule": "0 7 * * *"
+    }
+  ]
 }
