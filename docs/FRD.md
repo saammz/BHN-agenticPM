@@ -12,7 +12,8 @@ It builds on System 3. It reads System 3's submission data and does not change i
 | --- | --- |
 | Document | Functional Requirements Document (FRD) |
 | System | BNH Agentic PM Compliance Monitor |
-| Version | 0.3 (draft): adds sign-in, PM portal, Neon Postgres, Resend, tamper-evident audit trail |
+| Version | 0.4 (draft): adds the page map, plain-English CoS app with Settings, seeded accounts and Vercel hosting. 0.3 added sign-in, PM portal, Neon Postgres, Resend and the tamper-evident audit trail |
+| Live | https://bnh-agenticpm.vercel.app (GitHub `saammz/BHN-agenticPM`, deploys on push to `main`) |
 | Depends on | System 3 FRD (BR-1 to BR-9, D4 Settings) |
 | LLM gateway | OpenRouter (OpenAI-compatible tool calling) |
 | Database | Dedicated Neon Postgres, separate from System 3 |
@@ -35,6 +36,7 @@ It builds on System 3. It reads System 3's submission data and does not change i
 - A10: Passwordless sign-in by emailed code or link (Resend), showing the requesting IP address; CoS and PM roles
 - A11: A PM portal: own portfolios' findings, emails received, and disputes the CoS decides
 - A12: Persistent storage in a dedicated Neon Postgres database
+- A13: A plain-English web app for non-technical users: CoS app with tabs and a Settings page, PM portal, audit log and workflow pages, in the System 3 visual style
 
 **Out of scope (this release)**
 
@@ -163,14 +165,14 @@ FR-H.1a The trail is **tamper-evident**: each entry stores a gap-free sequence n
 FR-H.1b The trail is **append-only**: database triggers reject UPDATE, DELETE and TRUNCATE, and *Reset* never clears it (a reset is itself audited).
 FR-H.1c The CoS has an **Audit log** page with category chips, search, actor, outcome, date and run filters, expandable entries (full details, device, hashes), one-click chain verification, live tail and CSV export (spreadsheet-formula-safe). The CLI has `audit`, `audit-verify` and `audit-export`.
 FR-H.1d PMs see their own recent sign-in activity (IP and device) in *My compliance*.
-34. FR-H.2 Every node start, end and error, and every edge traversal, is written to the run trace (`state/runs/<run_id>.jsonl`), along with LLM steps and token usage.
+34. FR-H.2 Every node start, end and error, and every edge traversal, is written to the run trace, along with LLM steps and token usage. Locally the trace is `state/runs/<run_id>.jsonl`; on Vercel (no lasting disk) it is the `run_events` table.
 
 **A9 — Workflow visualiser**
 
 35. FR-I.1 A canvas shows the workflow as nodes: Trigger → Read submissions → Load overrides → Rules engine → LLM agent ⇄ Agent tools → Validate & ground / Rules-only fallback → Policy gate → Send email / Console report / Review queue → Audit log, plus Human override with its paths back into the flow.
 36. FR-I.2 During a run, nodes show their state (running / done / error / fallback) and how many times they ran. Edges animate as data passes and show item counts.
 37. FR-I.3 Clicking a node shows what it did in that run: findings, decisions with reasons, tool calls and results, the LLM assessment, and emails.
-38. FR-I.4 Past runs can be reopened and replayed. Review queue, outbox and overrides are tabs in the same screen.
+38. FR-I.4 Past runs can be reopened and replayed. The canvas is available full-screen at `/workflow` and embedded in the CoS app's **Workflow** tab. Labels and the node inspector use plain English; technical detail is folded away.
 
 **A10 — Authentication**
 
@@ -181,8 +183,8 @@ FR-H.1d PMs see their own recent sign-in activity (IP and device) in *My complia
 43. FR-J.5 The one-click link opens a confirmation page and only signs in on a button press, so email security scanners can't use it up.
 44. FR-J.6 Protections: codes and link tokens stored only as HMAC-SHA256 hashes; 5 wrong guesses burn a code; at most 5 code requests per email and 20 per IP per 15 minutes; 25 failed verifications per IP per 15 minutes; the same response whether or not the email has an account.
 45. FR-J.7 Sessions use a random 256-bit token in an HttpOnly, SameSite=Lax cookie (Secure on https), stored only as a hash. They expire after 30 minutes idle or 12 hours. Sign-out and deactivation revoke them on the server.
-46. FR-J.8 State-changing requests must be JSON, and a cross-site Origin is rejected (CSRF). Responses carry CSP, X-Frame-Options DENY and Referrer-Policy no-referrer.
-47. FR-J.9 Every sign-in event (requested, failed, rate-limited, signed in, signed out) is logged with IP and user agent and shown to the CoS in the Users tab.
+46. FR-J.8 State-changing requests must be JSON, and a cross-site Origin is rejected (CSRF). Responses carry CSP, X-Frame-Options SAMEORIGIN (so the app can embed its own workflow page, and no other site can) and Referrer-Policy no-referrer.
+47. FR-J.9 Every sign-in event (requested, failed, rate-limited, signed in, signed out) is logged with IP and user agent and shown to the CoS under **Settings → Security & history**.
 48. FR-J.10 Only accounts created by the CoS can sign in. There is no self-registration.
 
 **A11 — PM portal and disputes**
@@ -194,10 +196,71 @@ FR-H.1d PMs see their own recent sign-in activity (IP and device) in *My complia
 
 **A12 — Storage and email delivery**
 
-53. FR-L.1 All agent state is in the dedicated Neon Postgres database: users, portfolios, submissions, settings, sessions, sign-in codes and events, findings, overrides, review items, disputes, action ledger, email log and audit. Run traces for the canvas are JSONL files.
+53. FR-L.1 All agent state is in the dedicated Neon Postgres database: users, portfolios, submissions, settings, sessions, sign-in codes and events, findings, overrides, review items, disputes, action ledger, email log and audit. Run traces are JSONL files locally and the `run_events` table on Vercel. Settings changed in the app are stored in `app_config` and override `.env` defaults.
 54. FR-L.2 If the database is unreachable, the run aborts and sends nothing (FR-B.2).
 55. FR-L.3 Sign-in emails always go through Resend. Compliance emails follow `AGENT_EMAIL_DELIVERY`: `simulated` (logged only), `redirect` (all sent to one test inbox) or `resend` (real recipients).
 56. FR-L.4 Every email is logged with its delivery mode, Resend id and status. Sign-in codes are never stored in the log.
+
+**A13 — Pages and navigation**
+
+57. FR-M.1 The app uses everyday language throughout. Rule ids, decision codes and model names are translated (for example `MISSING_SUBMISSION` → "Monthly update is overdue", `queue` → "Waiting for you"); technical detail is only in the workflow inspector, the audit log and **Settings → Advanced**.
+58. FR-M.2 Pages:
+
+| Address | Who | Purpose |
+| --- | --- | --- |
+| `/login` | Everyone | Enter email, then the 6-digit code. Shows the visitor's IP to compare with the email |
+| `/auth/link` | Everyone | Confirmation page for the one-click link (FR-J.5) |
+| `/` | CoS | The CoS app (FR-M.3) |
+| `/` | PM | *My compliance* (FR-K.1): open and resolved issues, disputes, recent monthly updates, emails received, recent sign-in activity |
+| `/dispute/<fingerprint>` | PM | Link from a reminder email; opens the dispute form for that issue after sign-in |
+| `/workflow` | CoS | Full-screen workflow canvas (A9) |
+| `/audit` | CoS | Audit log (FR-H.1c) |
+| `/api/cron/daily` | Vercel Cron | Daily check; needs `Authorization: Bearer <CRON_SECRET>` |
+
+A PM who opens a CoS page or API gets 403 (pages redirect to `/`). Anyone signed out is sent to `/login`.
+
+59. FR-M.3 The CoS app has six tabs:
+
+| Tab | Content |
+| --- | --- |
+| Overview | Headline figures, items awaiting a decision, recent activity, every portfolio's status, last check time and **Run check now** |
+| Needs your decision | Held actions and PM disputes, each with the reason in plain English; approve, decline, or "incorrect: do not raise again"; recently decided items |
+| Portfolios | Every portfolio and its status; a side panel per portfolio with its issues, monthly updates, emails and history |
+| Activity | Plain-English feed of checks, emails, decisions and settings changes |
+| Workflow | The embedded workflow canvas (FR-I), with a link to `/workflow` |
+| Settings | See FR-M.4 |
+
+60. FR-M.4 **Settings** holds everything that was previously configuration, so the system is plug-and-play:
+    - *Assistant*: operating mode (Automatic / Ask me first / Practice), daily check on/off and time (WAT), pause.
+    - *Reporting rules*: deadline day, reminder window, months of Red before alerting, cash-drop threshold.
+    - *AI review*: on/off, model, confidence thresholds, OpenRouter key (replace and test).
+    - *Email*: sender, Resend key (replace and send a test), delivery mode (practice / one test inbox / real recipients).
+    - *Team & access*: add and deactivate people, assign each portfolio to a manager.
+    - *Exceptions*: active exceptions and "do not raise again" decisions, with removal.
+    - *Security & history*: link to the audit log, recent sign-in activity.
+    - *Advanced*: demonstration date, technical view, system status (database test), start over (reset demo state; the audit trail is kept).
+61. FR-M.5 Every settings change is validated on the server, applies to every running instance at once, and is written to the audit trail with old and new values. Keys are write-only: the page shows only whether a key is set.
+62. FR-M.6 Pages follow the System 3 design: navy header with gold rule, IBM Plex Sans, RAG status pills, NGN amounts and WAT times; usable on a phone.
+
+**A14 — Seeded accounts**
+
+63. FR-N.1 `db seed` creates the first CoS from `SEED_COS_EMAIL`, eight demo PMs (from `data/portfolios.json`), the eight portfolios and their submissions. It is idempotent.
+64. FR-N.2 Accounts in the live database (4 Nov 2026):
+
+| Email | Name | Role | Portfolio |
+| --- | --- | --- | --- |
+| `usorohdev@gmail.com` | Chief of Staff | CoS | All (full app) |
+| `usotex@gmail.com` | Test PM | PM | P01 Lagos Real Estate Fund I |
+| `tunde.bakare@bnh.example` | Tunde Bakare | PM | P02 Agri-Value Chain Fund |
+| `ngozi.eze@bnh.example` | Ngozi Eze | PM | P03 Fintech Ventures II |
+| `ibrahim.musa@bnh.example` | Ibrahim Musa | PM | P04 Infrastructure Debt Fund |
+| `funmi.adeyemi@bnh.example` | Funmi Adeyemi | PM | P05 Healthcare Growth Fund |
+| `chinedu.obi@bnh.example` | Chinedu Obi | PM | P06 Renewable Energy Platform |
+| `amina.yusuf@bnh.example` | Amina Yusuf | PM | P07 Consumer Retail Holdings |
+| `segun.afolabi@bnh.example` | Segun Afolabi | PM | P08 Logistics & Ports Fund |
+| `adaeze.okafor@bnh.example` | Adaeze Okafor | PM | None (P01 reassigned to Test PM) |
+
+There are no passwords (FR-J.2). Only the two Gmail accounts can receive a sign-in code; `bnh.example` is a reserved domain that cannot receive email. Compliance emails are in practice mode (`simulated`), so no demo PM is ever emailed.
 
 ## Incorrect assessments
 
@@ -268,7 +331,7 @@ All are tables in the dedicated Neon Postgres database, except RunTrace (JSONL f
 
 ## Acceptance criteria
 
-Items AC-1 to AC-10 are covered by `agenticPM/tests/test_agent.py` (18 tests) and the visualiser demo.
+Items AC-1 to AC-10 are covered by `agenticPM/tests/test_agent.py` and the visualiser demo. The full suite (`tests/`) has 61 tests.
 
 - [x] AC-1 A run reads the mocked data, evaluates all 8 portfolios, and sends 5 batched simulated emails, holding 3 actions for review (as of 2026-11-04).
 - [x] AC-2 Re-running immediately sends nothing (idempotency).
@@ -290,6 +353,8 @@ Items AC-1 to AC-10 are covered by `agenticPM/tests/test_agent.py` (18 tests) an
 - [x] AC-19 A full run writes run, data, rules, LLM (one per portfolio), decision (one per action), email, review and completion events; all carry the run id (`tests/test_audit.py`).
 - [x] AC-20 Altering or deleting any audit entry is detected by verification at the right sequence number; the database refuses UPDATE and DELETE on the trail.
 - [x] AC-21 Sign-in codes appear in neither the email log nor the audit trail.
+- [x] AC-22 Deployed on Vercel: unauthenticated `/` redirects to `/login`, CoS-only pages return 403 to a PM, the daily-check and webhook endpoints reject requests without their secrets, and a webhook-triggered check stores its run trace in Neon.
+- [x] AC-23 Settings changes made in the app take effect without a restart and are audited (`tests/test_auth_server.py`, `SettingsTests`).
 - [ ] AC-12 The CoS office signs off the rule thresholds and email wording.
 
 ## Rollout

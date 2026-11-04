@@ -14,18 +14,63 @@ with one click. Every action is recorded in a tamper-evident audit log.
 
 There are **no passwords**. Enter your email address on the sign-in page and a 6-digit code (plus a one-click
 link) is emailed to you from `agent@mediatree.social`. The email shows the IP address, device and time of the
-request. Codes expire after 10 minutes and work once.
-
-| Account | Role | What they see |
-|---|---|---|
-| `usorohdev@gmail.com` | Chief of Staff | Full assistant: overview, decisions, portfolios, activity, how it works, settings, audit log |
-| `usotex@gmail.com` | Portfolio manager (owns *Lagos Real Estate Fund I*) | *My compliance*: own portfolio's issues, emails, disputes |
-
-Seven further demo portfolio managers (`adaeze.okafor@bnh.example` and others) have placeholder addresses
-that cannot receive email. To sign in as one of them, the Chief of Staff can change a portfolio's manager under
-**Settings → Team & access**, or add a new person with a real address.
+request. Codes expire after 10 minutes and work once. Only accounts listed below (or added by the Chief of
+Staff) can sign in; there is no self-registration.
 
 > Locally, without a Resend key, sign-in codes are printed in the server console instead of being emailed.
+
+### Seeded accounts
+
+These are the accounts in the live database (https://bnh-agenticpm.vercel.app):
+
+| Email | Name | Role | Portfolio | Can receive email? |
+|---|---|---|---|---|
+| `usorohdev@gmail.com` | Chief of Staff | Chief of Staff | All portfolios (full app) | Yes |
+| `usotex@gmail.com` | Test PM | Portfolio manager | P01 Lagos Real Estate Fund I | Yes |
+| `tunde.bakare@bnh.example` | Tunde Bakare | Portfolio manager | P02 Agri-Value Chain Fund | No (placeholder) |
+| `ngozi.eze@bnh.example` | Ngozi Eze | Portfolio manager | P03 Fintech Ventures II | No (placeholder) |
+| `ibrahim.musa@bnh.example` | Ibrahim Musa | Portfolio manager | P04 Infrastructure Debt Fund | No (placeholder) |
+| `funmi.adeyemi@bnh.example` | Funmi Adeyemi | Portfolio manager | P05 Healthcare Growth Fund | No (placeholder) |
+| `chinedu.obi@bnh.example` | Chinedu Obi | Portfolio manager | P06 Renewable Energy Platform | No (placeholder) |
+| `amina.yusuf@bnh.example` | Amina Yusuf | Portfolio manager | P07 Consumer Retail Holdings | No (placeholder) |
+| `segun.afolabi@bnh.example` | Segun Afolabi | Portfolio manager | P08 Logistics & Ports Fund | No (placeholder) |
+| `adaeze.okafor@bnh.example` | Adaeze Okafor | Portfolio manager | None (P01 reassigned to Test PM) | No (placeholder) |
+
+The `bnh.example` addresses cannot receive email, so nobody can sign in as them. To try the portfolio-manager
+view for another portfolio, the Chief of Staff can reassign it to a real address under **Settings → Team & access**.
+
+**On a fresh database**, `db seed` creates the Chief of Staff from `SEED_COS_EMAIL` and the eight demo managers,
+with P01 assigned to Adaeze Okafor. To reproduce the accounts above, run:
+
+```bash
+.venv/bin/python agentpm.py user-add "Test PM" usotex@gmail.com PM
+.venv/bin/python agentpm.py assign P01 usotex@gmail.com
+```
+
+---
+
+## Pages
+
+| Address | Who | What it is |
+|---|---|---|
+| `/login` | Everyone | Sign in: enter your email, then the 6-digit code. Shows your IP address so you can compare it with the email. |
+| `/auth/link` | Everyone | Opened from the one-click link in the sign-in email. Signs in only when you press **Continue**, so email scanners can't use the link up. |
+| `/` | Chief of Staff | The main app (see tabs below). |
+| `/` | Portfolio manager | **My compliance**: open and resolved issues for your own portfolios, your disputes, recent monthly updates, emails sent to you, and your recent sign-in activity. |
+| `/dispute/<id>` | Portfolio manager | Link from a reminder email. After sign-in it opens the dispute form for that issue. |
+| `/workflow` | Chief of Staff | Full-screen workflow diagram (n8n-style). Nodes light up live during a check; earlier checks can be replayed; click a node to see what it did. |
+| `/audit` | Chief of Staff | Audit log: filters, search, expandable entries, one-click tamper check, live tail, CSV export. |
+
+**Chief of Staff tabs** (at `/`):
+
+| Tab | What it shows |
+|---|---|
+| Overview | Headline figures, items awaiting a decision, recent activity, status of every portfolio, **Run check now**. |
+| Needs your decision | Actions held for approval and disputes from portfolio managers. Approve, decline or mark "incorrect: do not raise again". |
+| Portfolios | Every portfolio with its status; click one for a side panel with issues, monthly updates, emails and history. |
+| Activity | Plain-English feed of checks, emails, decisions and settings changes. |
+| Workflow | The workflow diagram embedded in the app, with a link to the full view. |
+| Settings | Assistant (mode, pause, daily check time), Reporting rules, AI review, Email (sender, test email, practice / test inbox / real delivery), Team & access, Exceptions, Security & history (audit log, sign-in activity), Advanced (demonstration date, technical view, system status, start over). |
 
 ---
 
@@ -127,6 +172,7 @@ step live.
 api/index.py      Vercel entry point            server.py   web server: sign-in, roles, API
 webapi.py         overview, activity, settings   agentpm.py  command line
 agent/            rules, AI loop, policy gate, email, sign-in, audit trail, database layer
-ui/               app (CoS), pm (portfolio manager), login, audit log, workflow diagram, bnh.css design system
+ui/               app.html (CoS), pm.html (portfolio manager), login.html, link.html, audit.html, workflow.html,
+                  plain.js (plain-English labels), bnh.css (System 3 design system)
 data/             demo dataset loaded by `db seed`     docs/  FRD and design document     tests/  test suite
 ```
