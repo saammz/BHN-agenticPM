@@ -8,6 +8,7 @@ os.environ.setdefault("AGENTICPM_STATE_DIR", tempfile.mkdtemp(prefix="agenticpm-
 os.environ["AGENTICPM_NO_SECRET_WRITE"] = "1"
 os.environ["DATABASE_URL"] = ""
 os.environ["RESEND_API_KEY"] = ""
+os.environ["AUTH_CODE_DELIVERY"] = "email"  # tests read codes from captured emails
 os.environ["AGENT_EMAIL_DELIVERY"] = "simulated"
 os.environ["AGENT_LLM"] = "mock"           # never call a real AI from tests
 os.environ["DAILY_CHECK_TIME"] = ""

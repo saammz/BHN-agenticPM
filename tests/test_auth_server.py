@@ -12,6 +12,7 @@ os.environ.setdefault("AGENTICPM_STATE_DIR", tempfile.mkdtemp(prefix="agenticpm-
 os.environ["AGENTICPM_NO_SECRET_WRITE"] = "1"
 os.environ["DATABASE_URL"] = ""
 os.environ["RESEND_API_KEY"] = ""
+os.environ["AUTH_CODE_DELIVERY"] = "email"  # tests read codes from captured emails
 os.environ["AGENT_EMAIL_DELIVERY"] = "simulated"
 os.environ["AGENT_LLM"] = "mock"           # never call a real AI from tests
 os.environ["DAILY_CHECK_TIME"] = ""
@@ -240,6 +241,37 @@ class ServerTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ScreenCodeTests(unittest.TestCase):
+    """AUTH_CODE_DELIVERY=screen: the code comes back to the page and no email is sent."""
+    setUpClass = ServerTests.__dict__["setUpClass"]
+    tearDownClass = ServerTests.__dict__["tearDownClass"]
+
+    def setUp(self):
+        ServerTests.setUp(self)
+        os.environ["AUTH_CODE_DELIVERY"] = "screen"
+        self.addCleanup(os.environ.__setitem__, "AUTH_CODE_DELIVERY", "email")
+
+    def test_code_shown_not_emailed(self):
+        c = Client(self.base)
+        st, body, _ = c.call("GET", "/api/auth/config")
+        self.assertEqual(body["code_delivery"], "screen")
+        SENT.clear()
+        st, body, _ = c.call("POST", "/api/auth/request", {"email": "cos@bnh.example"})
+        self.assertEqual(st, 200)
+        self.assertEqual(body["delivery"], "screen")
+        self.assertRegex(body["code"], r"^\d{6}$")
+        self.assertEqual(SENT, [])
+        st, body, _ = c.call("POST", "/api/auth/verify", {"email": "cos@bnh.example", "code": body["code"]})
+        self.assertEqual((st, body["role"]), (200, "COS"))
+        self.assertEqual(c.call("GET", "/api/me")[0], 200)
+        self.assertEqual(SENT, [])  # no sign-in alert either
+
+    def test_unknown_email_rejected(self):
+        st, body, _ = Client(self.base).call("POST", "/api/auth/request", {"email": "nobody@bnh.example"})
+        self.assertEqual(st, 404)
+        self.assertNotIn("code", body)
 
 
 class SettingsTests(ServerTests):

@@ -12,32 +12,34 @@ with one click. Every action is recorded in a tamper-evident audit log.
 
 ## Signing in
 
-There are **no passwords**. Enter your email address on the sign-in page and a 6-digit code (plus a one-click
-link) is emailed to you from `agent@mediatree.social`. The email shows the IP address, device and time of the
-request. Codes expire after 10 minutes and work once. Only accounts listed below (or added by the Chief of
-Staff) can sign in; there is no self-registration.
+There are **no passwords** and **no sign-in emails**. Enter your email address on the sign-in page and select
+**Get a sign-in code**: the 6-digit code appears on the page, already filled in, so you just select **Sign in**.
+Codes expire after 10 minutes and work once. Only the accounts listed below (or added by the Chief of Staff) can
+sign in; an unknown address is refused.
 
-> Locally, without a Resend key, sign-in codes are printed in the server console instead of being emailed.
+This is set by `AUTH_CODE_DELIVERY="screen"` (local `.env` and Vercel). To go back to emailing codes (with the
+requesting IP address and device in the email, and an alert when a sign-in completes from a different IP), set it
+to `email`.
 
 ### Seeded accounts
 
 These are the accounts in the live database (https://bnh-agenticpm.vercel.app):
 
-| Email | Name | Role | Portfolio | Can receive email? |
-|---|---|---|---|---|
-| `usorohdev@gmail.com` | Chief of Staff | Chief of Staff | All portfolios (full app) | Yes |
-| `usotex@gmail.com` | Test PM | Portfolio manager | P01 Lagos Real Estate Fund I | Yes |
-| `tunde.bakare@bnh.example` | Tunde Bakare | Portfolio manager | P02 Agri-Value Chain Fund | No (placeholder) |
-| `ngozi.eze@bnh.example` | Ngozi Eze | Portfolio manager | P03 Fintech Ventures II | No (placeholder) |
-| `ibrahim.musa@bnh.example` | Ibrahim Musa | Portfolio manager | P04 Infrastructure Debt Fund | No (placeholder) |
-| `funmi.adeyemi@bnh.example` | Funmi Adeyemi | Portfolio manager | P05 Healthcare Growth Fund | No (placeholder) |
-| `chinedu.obi@bnh.example` | Chinedu Obi | Portfolio manager | P06 Renewable Energy Platform | No (placeholder) |
-| `amina.yusuf@bnh.example` | Amina Yusuf | Portfolio manager | P07 Consumer Retail Holdings | No (placeholder) |
-| `segun.afolabi@bnh.example` | Segun Afolabi | Portfolio manager | P08 Logistics & Ports Fund | No (placeholder) |
-| `adaeze.okafor@bnh.example` | Adaeze Okafor | Portfolio manager | None (P01 reassigned to Test PM) | No (placeholder) |
+| Email | Name | Role | Portfolio |
+|---|---|---|---|
+| `usorohdev@gmail.com` | Chief of Staff | Chief of Staff | All portfolios (full app) |
+| `usotex@gmail.com` | Test PM | Portfolio manager | P01 Lagos Real Estate Fund I |
+| `tunde.bakare@bnh.example` | Tunde Bakare | Portfolio manager | P02 Agri-Value Chain Fund |
+| `ngozi.eze@bnh.example` | Ngozi Eze | Portfolio manager | P03 Fintech Ventures II |
+| `ibrahim.musa@bnh.example` | Ibrahim Musa | Portfolio manager | P04 Infrastructure Debt Fund |
+| `funmi.adeyemi@bnh.example` | Funmi Adeyemi | Portfolio manager | P05 Healthcare Growth Fund |
+| `chinedu.obi@bnh.example` | Chinedu Obi | Portfolio manager | P06 Renewable Energy Platform |
+| `amina.yusuf@bnh.example` | Amina Yusuf | Portfolio manager | P07 Consumer Retail Holdings |
+| `segun.afolabi@bnh.example` | Segun Afolabi | Portfolio manager | P08 Logistics & Ports Fund |
+| `adaeze.okafor@bnh.example` | Adaeze Okafor | Portfolio manager | None (P01 reassigned to Test PM) |
 
-The `bnh.example` addresses cannot receive email, so nobody can sign in as them. To try the portfolio-manager
-view for another portfolio, the Chief of Staff can reassign it to a real address under **Settings → Team & access**.
+Because the code is shown on screen, you can sign in as **any** of these accounts, including the `bnh.example`
+demo managers, to see each portfolio manager's view.
 
 **On a fresh database**, `db seed` creates the Chief of Staff from `SEED_COS_EMAIL` and the eight demo managers,
 with P01 assigned to Adaeze Okafor. To reproduce the accounts above, run:
@@ -53,8 +55,8 @@ with P01 assigned to Adaeze Okafor. To reproduce the accounts above, run:
 
 | Address | Who | What it is |
 |---|---|---|
-| `/login` | Everyone | Sign in: enter your email, then the 6-digit code. Shows your IP address so you can compare it with the email. |
-| `/auth/link` | Everyone | Opened from the one-click link in the sign-in email. Signs in only when you press **Continue**, so email scanners can't use the link up. |
+| `/login` | Everyone | Sign in: enter your email; the 6-digit code is shown on the page (or emailed, if `AUTH_CODE_DELIVERY=email`). |
+| `/auth/link` | Everyone | Only in email mode: opened from the one-click link in the sign-in email. Signs in only when you press **Continue**, so email scanners can't use the link up. |
 | `/` | Chief of Staff | The main app (see tabs below). |
 | `/` | Portfolio manager | **My compliance**: open and resolved issues for your own portfolios, your disputes, recent monthly updates, emails sent to you, and your recent sign-in activity. |
 | `/dispute/<id>` | Portfolio manager | Link from a reminder email. After sign-in it opens the dispute form for that issue. |
@@ -99,6 +101,7 @@ cp .env.example .env            # then fill in the values (see below)
 | `SEED_COS_EMAIL`, `SEED_COS_NAME` | First Chief of Staff account, created by `db seed`. |
 | `AUTH_SECRET`, `WEBHOOK_SECRET` | Generated automatically into `.env` on first run. **Set them explicitly on any hosted deployment.** |
 | `CRON_SECRET` | Protects the daily-check endpoint on Vercel. |
+| `AUTH_CODE_DELIVERY` | `screen`: show sign-in codes on the page, send no email. `email`: send them through Resend. |
 | `TRUST_PROXY` | `1` behind a proxy/CDN (Vercel), so the real client IP is recorded. |
 
 Everything else (operating mode, AI model, confidence thresholds, reporting rules, email delivery mode, daily
@@ -107,7 +110,7 @@ check time, team, exceptions) is set in the app under **Settings** and stored in
 ### Tests
 
 ```bash
-.venv/bin/python -m unittest discover -s tests -v    # 61 tests; uses a throwaway SQLite file and never sends email
+.venv/bin/python -m unittest discover -s tests -v    # 63 tests; uses a throwaway SQLite file and never sends email
 ```
 
 ---

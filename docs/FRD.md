@@ -177,7 +177,8 @@ FR-H.1d PMs see their own recent sign-in activity (IP and device) in *My complia
 **A10 — Authentication**
 
 39. FR-J.1 Every page and API needs a signed-in session, except the sign-in pages and the webhook (which needs the `X-Webhook-Secret` header).
-40. FR-J.2 Sign-in is passwordless. The user enters their email, and Resend delivers a 6-digit code and a one-click link, valid for 10 minutes and usable once. Requesting a new code invalidates the old one.
+40. FR-J.2a **Demo setting (current):** with `AUTH_CODE_DELIVERY=screen`, no sign-in email is sent. The code is shown on the sign-in page and filled in; an unknown email is refused; no different-IP alert is sent. All other protections (single use, 10-minute expiry, rate limits, logging) still apply. This means anyone who knows an account's email can sign in as it, so it is for demonstration only; production uses `email`.
+40. FR-J.2 In `email` mode, sign-in is passwordless. The user enters their email, and Resend delivers a 6-digit code and a one-click link, valid for 10 minutes and usable once. Requesting a new code invalidates the old one.
 41. FR-J.3 The sign-in email states the **IP address, device and time** of the request, and what to do if it wasn't them. The sign-in page shows the same IP so the user can compare.
 42. FR-J.4 If a sign-in completes from a different IP than the one that requested the code (e.g. the link opened on a phone), the user is emailed an alert showing both IPs.
 43. FR-J.5 The one-click link opens a confirmation page and only signs in on a button press, so email security scanners can't use it up.
@@ -208,7 +209,7 @@ FR-H.1d PMs see their own recent sign-in activity (IP and device) in *My complia
 
 | Address | Who | Purpose |
 | --- | --- | --- |
-| `/login` | Everyone | Enter email, then the 6-digit code. Shows the visitor's IP to compare with the email |
+| `/login` | Everyone | Enter email, then the 6-digit code (shown on the page in screen mode, emailed in email mode) |
 | `/auth/link` | Everyone | Confirmation page for the one-click link (FR-J.5) |
 | `/` | CoS | The CoS app (FR-M.3) |
 | `/` | PM | *My compliance* (FR-K.1): open and resolved issues, disputes, recent monthly updates, emails received, recent sign-in activity |
@@ -260,7 +261,7 @@ A PM who opens a CoS page or API gets 403 (pages redirect to `/`). Anyone signed
 | `segun.afolabi@bnh.example` | Segun Afolabi | PM | P08 Logistics & Ports Fund |
 | `adaeze.okafor@bnh.example` | Adaeze Okafor | PM | None (P01 reassigned to Test PM) |
 
-There are no passwords (FR-J.2). Only the two Gmail accounts can receive a sign-in code; `bnh.example` is a reserved domain that cannot receive email. Compliance emails are in practice mode (`simulated`), so no demo PM is ever emailed.
+There are no passwords. With the current screen setting (FR-J.2a) the code is shown on the sign-in page, so any account above can be used and no sign-in email is sent to anyone. Compliance emails are in practice mode (`simulated`), so no demo PM is ever emailed.
 
 ## Incorrect assessments
 
@@ -331,7 +332,7 @@ All are tables in the dedicated Neon Postgres database, except RunTrace (JSONL f
 
 ## Acceptance criteria
 
-Items AC-1 to AC-10 are covered by `agenticPM/tests/test_agent.py` and the visualiser demo. The full suite (`tests/`) has 61 tests.
+Items AC-1 to AC-10 are covered by `agenticPM/tests/test_agent.py` and the visualiser demo. The full suite (`tests/`) has 63 tests.
 
 - [x] AC-1 A run reads the mocked data, evaluates all 8 portfolios, and sends 5 batched simulated emails, holding 3 actions for review (as of 2026-11-04).
 - [x] AC-2 Re-running immediately sends nothing (idempotency).
@@ -354,6 +355,7 @@ Items AC-1 to AC-10 are covered by `agenticPM/tests/test_agent.py` and the visua
 - [x] AC-20 Altering or deleting any audit entry is detected by verification at the right sequence number; the database refuses UPDATE and DELETE on the trail.
 - [x] AC-21 Sign-in codes appear in neither the email log nor the audit trail.
 - [x] AC-22 Deployed on Vercel: unauthenticated `/` redirects to `/login`, CoS-only pages return 403 to a PM, the daily-check and webhook endpoints reject requests without their secrets, and a webhook-triggered check stores its run trace in Neon.
+- [x] AC-24 In screen mode, requesting a code returns it to the page, sends no email (no code, no alert), and an unknown email is refused (`tests/test_auth_server.py`, `ScreenCodeTests`).
 - [x] AC-23 Settings changes made in the app take effect without a restart and are audited (`tests/test_auth_server.py`, `SettingsTests`).
 - [ ] AC-12 The CoS office signs off the rule thresholds and email wording.
 

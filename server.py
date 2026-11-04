@@ -1,6 +1,6 @@
 """Agent console: sign-in, workflow canvas (CoS), PM portal, API and daily scheduler.
 
-Public:   GET /login · GET /auth/link · POST /api/auth/{request,verify,link,logout} · GET /dispute/<fp>
+Public:   GET /login · GET /auth/link · GET /api/auth/config · POST /api/auth/{request,verify,link,logout} · GET /dispute/<fp>
           POST /api/webhook/submission   (X-Webhook-Secret header)
 Signed in: GET / (CoS → canvas, PM → portal) · GET /api/me · GET /api/status
 CoS only:  runs, review, overrides, outbox, users, portfolios, disputes, reset
@@ -252,6 +252,8 @@ class Handler(BaseHTTPRequestHandler):
 
         if path == "/login":
             return self.send_html("login.html")
+        if path == "/api/auth/config":
+            return self.send_json(200, {"code_delivery": self.cfg.auth_code_delivery})
         if path in ("/plain.js", "/bnh.css"):
             data = (UI / path.lstrip("/")).read_bytes()
             ctype = "application/javascript; charset=utf-8" if path.endswith(".js") else "text/css; charset=utf-8"
@@ -408,8 +410,10 @@ class Handler(BaseHTTPRequestHandler):
         self.check_csrf()
         b = self.body()
         if path == "/api/auth/request":
-            auth.request_code(str(b.get("email", "")), self.ip(), self.ua())
-            return self.send_json(200, {"ok": True, "ip": self.ip(),
+            code = auth.request_code(str(b.get("email", "")), self.ip(), self.ua())
+            if code:  # screen mode: no email is sent; the page shows the code
+                return self.send_json(200, {"ok": True, "ip": self.ip(), "delivery": "screen", "code": code})
+            return self.send_json(200, {"ok": True, "ip": self.ip(), "delivery": "email",
                                         "message": "If that email has an account, a sign-in code is on its way."})
         if path == "/api/auth/verify":
             token, user = auth.verify_code(str(b.get("email", "")), str(b.get("code", "")), self.ip(), self.ua())

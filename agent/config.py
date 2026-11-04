@@ -81,6 +81,8 @@ class Config:
     webhook_secret: str = field(default_factory=lambda: _env("WEBHOOK_SECRET", ""))
     trust_proxy: bool = field(default_factory=lambda: _env("TRUST_PROXY", "0") == "1")
     login_code_ttl_min: int = field(default_factory=lambda: int(_env("LOGIN_CODE_TTL_MIN", "10")))
+    # "email" (default): sign-in codes go by email. "screen": no email; the code is shown on the sign-in page (demo).
+    auth_code_delivery: str = field(default_factory=lambda: "screen" if _env("AUTH_CODE_DELIVERY", "email").strip().lower() == "screen" else "email")
     session_idle_min: int = field(default_factory=lambda: int(_env("SESSION_IDLE_MIN", "30")))
     session_max_hours: int = field(default_factory=lambda: int(_env("SESSION_MAX_HOURS", "12")))
     seed_cos_name: str = field(default_factory=lambda: _env("SEED_COS_NAME", "Chief of Staff"))

@@ -75,7 +75,8 @@ class Auth:
         return self.db.one("SELECT * FROM users WHERE email = %s", [email.strip().lower()])
 
     # ── step 1: request a code ──────────────────────────────────────────────────────
-    def request_code(self, email: str, ip: Optional[str], ua: Optional[str]) -> None:
+    def request_code(self, email: str, ip: Optional[str], ua: Optional[str]) -> Optional[str]:
+        """Creates a code. Email mode: emails it and returns None. Screen mode: returns it for the page; no email."""
         email = (email or "").strip().lower()
         if "@" not in email or len(email) > 254:
             raise AuthError("Enter a valid email address.")
@@ -88,7 +89,9 @@ class Auth:
         user = self.user_by_email(email)
         if not user or user["status"] != "ACTIVE":
             self._event("code_requested_unknown", email, ip=ip, ua=ua)
-            return  # same response as success: no account enumeration
+            if self.cfg.auth_code_delivery == "screen":
+                raise AuthError("No active account uses that email address.", 404)
+            return None  # same response as success: no account enumeration
         now = _now()
         self.db.x("UPDATE login_codes SET used_at = %s WHERE user_id = %s AND used_at IS NULL", [_iso(now), user["id"]])
         code = f"{secrets.randbelow(1_000_000):06d}"
@@ -98,6 +101,9 @@ class Auth:
             "link_hash": self._h(f"link:{link_token}"), "ip": ip, "user_agent": (ua or "")[:512], "attempts": 0,
             "expires_at": _iso(now + timedelta(minutes=self.cfg.login_code_ttl_min)), "used_at": None,
             "created_at": _iso(now)})
+        if self.cfg.auth_code_delivery == "screen":
+            self._event("code_requested", email, user["id"], ip, ua, delivery="screen", status="shown")
+            return code
         link = f"{self.cfg.app_url}/auth/link?token={link_token}"
         mail = login_code_email(user["name"], code, link, ip, ua, now, self.cfg.login_code_ttl_min)
         sent = self.mailer.send(user["email"], mail["subject"], mail["text"], "auth_code", html_body=mail["html"],
@@ -107,6 +113,7 @@ class Auth:
         self._event("code_requested", email, user["id"], ip, ua, delivery=sent["delivery"], status=sent["status"])
         if sent["status"] == "failed":
             raise AuthError("We couldn't send the email just now. Try again in a minute.", 503)
+        return None
 
     # ── step 2a: verify the code ────────────────────────────────────────────────────
     def verify_code(self, email: str, code: str, ip: Optional[str], ua: Optional[str]) -> Tuple[str, Dict[str, Any]]:
@@ -158,7 +165,7 @@ class Auth:
             "last_seen_at": _iso(now), "revoked_at": None, "created_at": _iso(now)})
         self.db.x("UPDATE users SET last_login_at = %s, last_login_ip = %s WHERE id = %s", [_iso(now), ip, user["id"]])
         self._event("signed_in", user["email"], user["id"], ip, ua, method=method, requested_from=code_row["ip"])
-        if code_row.get("ip") and ip and code_row["ip"] != ip:
+        if self.cfg.auth_code_delivery == "email" and code_row.get("ip") and ip and code_row["ip"] != ip:
             mail = new_signin_alert_email(user["name"], code_row["ip"], ip, ua, now)
             self.mailer.send(user["email"], mail["subject"], mail["text"], "auth_alert", transactional=True)
         return token, user

@@ -13,6 +13,9 @@
   .linkbtn:hover { text-decoration: underline; }
   .links { display: flex; justify-content: space-between; margin-top: 16px; }
   .ip { font-family: var(--font-mono); font-size: 13px; color: var(--fg); background: var(--surface-muted); border: 1px solid var(--line); border-radius: 4px; padding: 1px 6px; }
+  .shown { text-align: center; padding: 16px; border: 1px dashed var(--accent); border-radius: 8px; background: var(--accent-soft); }
+  .shown small { display: block; font-size: 12px; color: var(--fg-muted); text-transform: uppercase; letter-spacing: .06em; }
+  .shown b { display: block; margin-top: 6px; font: 600 30px/1 var(--font-mono); letter-spacing: 10px; color: var(--fg); }
   .alert { margin: 0; } [hidden] { display: none !important; }
 </style>
 </head>
@@ -21,14 +24,15 @@
   <div class="brandrow"><span class="brand dark"><span class="mark" aria-hidden="true">BNH</span><span class="name"><b>Compliance Assistant</b><small>System 3 · Reporting oversight</small></span></span></div>
   <div class="panel">
     <form id="f1" class="stack" novalidate>
-      <div><h1>Sign in</h1><p class="lead" style="margin-bottom:0">Enter your BNH email address. We will send you a one-time sign-in code.</p></div>
+      <div><h1>Sign in</h1><p class="lead" style="margin-bottom:0" id="lead1">Enter your BNH email address. We will send you a one-time sign-in code.</p></div>
       <div class="field" style="margin:0"><label class="flabel" for="email">Email</label><input id="email" type="email" autocomplete="username" required autofocus></div>
       <div class="alert danger" id="m1" role="alert" hidden><div class="t"></div></div>
       <button class="btn primary" id="b1" style="width:100%">Email me a sign-in code</button>
     </form>
     <form id="f2" class="stack" novalidate hidden>
-      <div><h1>Check your email</h1><p class="lead" style="margin-bottom:0">If <b id="who"></b> has an account, a 6-digit code is on its way. It expires in 10 minutes.</p></div>
-      <div class="alert info"><div class="t">The email shows the IP address this request came from: <span class="ip" id="ip"></span>. If it does not match, do not use the code.</div></div>
+      <div><h1 id="h2">Check your email</h1><p class="lead" style="margin-bottom:0" id="lead2">If <b id="who"></b> has an account, a 6-digit code is on its way. It expires in 10 minutes.</p></div>
+      <div class="shown" id="shown" hidden><small>Your sign-in code</small><b id="shownCode"></b></div>
+      <div class="alert info" id="ipnote"><div class="t">The email shows the IP address this request came from: <span class="ip" id="ip"></span>. If it does not match, do not use the code.</div></div>
       <div class="field" style="margin:0"><label class="flabel" for="code">Sign-in code</label><input id="code" class="code" inputmode="numeric" autocomplete="one-time-code" maxlength="7" required></div>
       <div class="alert danger" id="m2" role="alert" hidden><div class="t"></div></div>
       <button class="btn primary" id="b2" style="width:100%">Sign in</button>
@@ -46,14 +50,28 @@ async function post(url, body) {
   if (!r.ok) throw new Error(j.error || "Something went wrong. Please try again.");
   return j;
 }
+let SCREEN = false;
+fetch("/api/auth/config").then(r => r.json()).then(c => {
+  SCREEN = c.code_delivery === "screen";
+  if (SCREEN) { $("#b1").textContent = "Get a sign-in code"; $("#lead1").textContent = "Enter your BNH email address to get a one-time sign-in code."; $("#resend").textContent = "Get a new code"; }
+}).catch(() => {});
 function msg(el, text, tone) { el.hidden = !text; el.className = "alert " + (tone || "danger"); el.querySelector(".t").textContent = text || ""; }
 async function requestCode() {
   const email = $("#email").value.trim();
   $("#b1").disabled = true; msg($("#m1"), "");
   try {
     const j = await post("/api/auth/request", { email });
-    $("#who").textContent = email; $("#ip").textContent = j.ip;
-    $("#f1").hidden = true; $("#f2").hidden = false; $("#code").value = ""; $("#code").focus();
+    $("#ip").textContent = j.ip;
+    const shown = j.delivery === "screen" && j.code;
+    $("#shown").hidden = !shown; $("#ipnote").hidden = !!shown;
+    if (shown) {
+      $("#h2").textContent = "Enter your code"; $("#lead2").textContent = "Your code is shown below and filled in for you. It expires in 10 minutes and works once.";
+      $("#shownCode").textContent = j.code;
+    } else {
+      $("#h2").textContent = "Check your email"; $("#lead2").innerHTML = 'If <b id="who"></b> has an account, a 6-digit code is on its way. It expires in 10 minutes.';
+      $("#who").textContent = email;
+    }
+    $("#f1").hidden = true; $("#f2").hidden = false; $("#code").value = shown ? j.code : ""; shown ? $("#b2").focus() : $("#code").focus();
     return true;
   } catch (e) { msg($("#m1"), e.message); msg($("#m2"), e.message); return false; }
   finally { $("#b1").disabled = false; }
@@ -66,7 +84,7 @@ $("#f2").onsubmit = async e => {
   finally { $("#b2").disabled = false; }
 };
 $("#back").onclick = () => { $("#f2").hidden = true; $("#f1").hidden = false; $("#email").focus(); };
-$("#resend").onclick = async () => { if (await requestCode()) msg($("#m2"), "A new code is on its way. Earlier codes no longer work.", "success"); };
+$("#resend").onclick = async () => { if (await requestCode()) msg($("#m2"), SCREEN ? "New code shown above. Earlier codes no longer work." : "A new code is on its way. Earlier codes no longer work.", "success"); };
 fetch("/api/me").then(r => { if (r.ok) location.replace(next); });
 </script>
 </body>
