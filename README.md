@@ -5,6 +5,7 @@ update, checks it against BNH's reporting rules, and uses an AI reviewer to catc
 sends routine reminders by itself and refers anything uncertain or serious to the Chief of Staff, who decides
 with one click. Every action is recorded in a tamper-evident audit log.
 
+- **Live app (Vercel):** https://bnh-agenticpm.vercel.app (sign in with any account below; the code is shown on screen)
 - **Design document:** [`docs/Design-One-Pager.md`](docs/Design-One-Pager.md)
 - **Functional requirements (FRD):** [`docs/FRD.md`](docs/FRD.md)
 
