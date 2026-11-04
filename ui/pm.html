@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en-NG">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My compliance · BNH</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/bnh.css">
+<style>
+  .grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; }
+  .item { padding: 18px 24px; border-bottom: 1px solid var(--line); }
+  .item:last-child { border-bottom: 0; }
+  .item h3 { margin: 0; font-size: 15px; font-weight: 600; }
+  .item .meta { margin-top: 4px; font-size: 13px; color: var(--fg-muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .item p { margin: 10px 0 0; font-size: 14px; }
+  .item .ai { margin: 10px 0 0; padding: 10px 14px; border-left: 3px solid var(--accent); background: var(--accent-soft); border-radius: 0 6px 6px 0; font-size: 14px; }
+  .item .acts { margin-top: 14px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .item textarea { margin-top: 12px; }
+  .saved { color: var(--green); font-size: 13px; font-weight: 500; } .error { color: var(--red); font-size: 13px; font-weight: 500; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<header class="hdr">
+  <div class="rule" aria-hidden="true"></div>
+  <div class="wrap">
+    <div class="hrow">
+      <span class="brand"><span class="mark" aria-hidden="true">BNH</span><span class="name"><b>Compliance Assistant</b><small>System 3 · Reporting oversight</small></span></span>
+      <div class="hright"><div class="hwho"><b id="meName">…</b><small>Portfolio manager</small></div><button class="hbtn" id="out">Sign out</button></div>
+    </div>
+    <nav class="tabs" aria-label="Primary"><a class="on" href="/">My compliance</a></nav>
+  </div>
+</header>
+
+<main class="wrap page-main">
+  <div class="pagehead">
+    <div><p class="eyebrow">Portfolio manager</p><h1 id="hello">My compliance</h1>
+      <p class="desc" id="ports"></p></div>
+  </div>
+  <div class="alert info"><div class="t">The compliance assistant checks your monthly updates every day. If it has flagged something you believe is incorrect, you can dispute it below. The Chief of Staff reviews every dispute.</div></div>
+  <div class="grid">
+    <div class="card"><div class="card-h"><div><h2>Open issues</h2><p>Items that need your attention.</p></div></div><div id="open"></div></div>
+    <div class="card"><div class="card-h"><div><h2>Your disputes</h2></div></div><div id="disputes"></div></div>
+    <div class="card"><div class="card-h"><div><h2>Recent monthly updates</h2></div></div><div class="card-b flush" id="subs"></div></div>
+    <div class="card"><div class="card-h"><div><h2>Emails sent to you</h2></div></div><div class="card-b" id="emails"></div></div>
+    <div class="card"><div class="card-h"><div><h2>Resolved issues</h2></div></div><div id="resolved"></div></div>
+    <div class="card"><div class="card-h"><div><h2>Your recent sign-in activity</h2><p>If you do not recognise an IP address or device, tell the Chief of Staff's office immediately.</p></div></div><div class="card-b flush" id="signins"></div></div>
+  </div>
+</main>
+<footer class="foot"><div class="wrap">BNH · Compliance Assistant for System 3 Portfolio Reporting · All amounts in NGN · Times in WAT (UTC+1)</div></footer>
+
+<script src="/plain.js"></script>
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const ngn = v => (v < 0 ? "−" : "") + "₦" + Math.abs(+v).toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const DEC = { execute: "A reminder was sent to you", queue: "With the Chief of Staff for review", suppressed: "Exception granted by the Chief of Staff",
+  duplicate: "Reminder already sent", shadow: "Recorded only", log: "Recorded only" };
+const EMPTY = (t, p) => `<div class="empty sm"><div class="ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M4 7h16M4 12h16M4 17h10" stroke-linecap="round"/></svg></div><b>${esc(t)}</b>${p ? `<p>${esc(p)}</p>` : ""}</div>`;
+async function api(url, opt) {
+  const r = await fetch(url, opt); if (r.status === 401) { location.href = "/login"; throw new Error("signed out"); }
+  const j = await r.json(); if (!r.ok) throw new Error(j.error || r.status); return j;
+}
+function findingItem(f, openDisputes) {
+  const d = f.finding, disputed = openDisputes.has(f.fingerprint);
+  return `<div class="item" id="f-${f.fingerprint}">
+    <h3>${esc(PLAIN.rule(d.rule_id))}</h3>
+    <div class="meta">${esc(d.portfolio_name)} · ${esc(PLAIN.month(f.reporting_month))} · ${esc(DEC[f.last_decision] || "")}</div>
+    <p>${esc(d.rationale)}</p>
+    ${d.llm_note ? `<div class="ai"><b>Assistant's assessment:</b> ${esc(d.llm_note)}</div>` : ""}
+    ${f.status === "open" ? (disputed ? `<div class="acts"><span class="badge info">Dispute under review</span></div>` :
+      `<div class="acts"><button class="btn" onclick="openDispute('${f.fingerprint}')">Dispute this issue</button></div>
+       <div id="d-${f.fingerprint}" hidden><textarea id="t-${f.fingerprint}" maxlength="2000" placeholder="Explain why this is incorrect (for example: the cash reduction was the scheduled distribution to investors on 30 October)."></textarea>
+       <div class="acts"><button class="btn primary" onclick="sendDispute('${f.fingerprint}')">Send to Chief of Staff</button><span id="r-${f.fingerprint}"></span></div></div>`) : ""}
+  </div>`;
+}
+function openDispute(fp) { const el = $("#d-" + fp); el.hidden = !el.hidden; if (!el.hidden) $("#t-" + fp).focus(); }
+async function sendDispute(fp) {
+  const out = $("#r-" + fp);
+  try { await api("/api/pm/disputes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fingerprint: fp, message: $("#t-" + fp).value }) });
+    out.className = "saved"; out.textContent = "Sent. You will receive an email when it has been decided."; setTimeout(load, 1500); }
+  catch (e) { out.className = "error"; out.textContent = e.message; }
+}
+async function load() {
+  const [me, ov] = await Promise.all([api("/api/me"), api("/api/pm/overview")]);
+  $("#meName").textContent = me.name;
+  $("#hello").textContent = `Welcome, ${me.name.split(" ")[0]}`;
+  $("#ports").textContent = ov.portfolios.length ? "Your portfolios: " + ov.portfolios.map(p => p.name).join(", ") : "No portfolios are assigned to you yet. Please contact the Chief of Staff's office.";
+  const openD = new Set(ov.disputes.filter(d => d.status === "OPEN").map(d => d.fingerprint));
+  const open = ov.findings.filter(f => f.status === "open" && f.last_decision !== "log"), res = ov.findings.filter(f => f.status !== "open");
+  $("#open").innerHTML = open.length ? open.map(f => findingItem(f, openD)).join("") : EMPTY("No open issues", "Your reporting is in order.");
+  $("#resolved").innerHTML = res.length ? res.map(f => findingItem(f, openD)).join("") : EMPTY("No resolved issues yet");
+  const DS = { OPEN: ["Under review", "info"], UPHELD: ["Accepted", "success"], DENIED: ["Not accepted", "danger"] };
+  $("#disputes").innerHTML = ov.disputes.length ? ov.disputes.map(d => `<div class="item"><h3>${esc(PLAIN.rule(d.rule_id))}</h3>
+    <div class="meta"><span class="badge ${DS[d.status][1]}">${DS[d.status][0]}</span>${esc(PLAIN.month(d.reporting_month))} · submitted ${esc(PLAIN.when(d.created_at))}</div>
+    <p><span class="muted">Your explanation:</span> ${esc(d.message)}</p>${d.decision_note ? `<div class="ai"><b>Chief of Staff:</b> ${esc(d.decision_note)}</div>` : ""}</div>`).join("") : EMPTY("No disputes");
+  $("#subs").innerHTML = ov.submissions.length ? `<div style="overflow-x:auto"><table class="t"><thead><tr><th>Portfolio</th><th>Reporting month</th><th>RAG status</th><th class="r">Cash position (NGN)</th><th>Execution blocker</th></tr></thead><tbody>${ov.submissions.map(s => `<tr><td>${esc((ov.portfolios.find(p => p.id === s.portfolio_id) || {}).name || s.portfolio_id)}</td><td>${esc(PLAIN.month(s.reporting_month))}</td><td><span class="pill ${s.rag_status}">${esc(PLAIN.rag(s.rag_status))}</span></td><td class="r" style="${s.cash_position_ngn < 0 ? "color:var(--negative)" : ""}">${ngn(s.cash_position_ngn)}</td><td class="muted small">${esc(s.execution_blocker)}</td></tr>`).join("")}</tbody></table></div>` : EMPTY("No monthly updates");
+  $("#emails").innerHTML = ov.emails.length ? ov.emails.map(m => `<details style="margin-bottom:10px"><summary><b style="font-weight:600">${esc(m.subject)}</b> <span class="muted small">· ${esc(PLAIN.when(m.ts))}${m.status === "simulated" ? " · practice mode, not delivered" : ""}</span></summary><pre>${esc(m.body)}</pre></details>`).join("") : `<p class="muted" style="margin:0">No emails yet.</p>`;
+  const LBL = { signed_in: "Signed in", code_requested: "Requested a sign-in code", verify_failed: "Incorrect or expired code", rate_limited: "Too many attempts", signed_out: "Signed out" };
+  $("#signins").innerHTML = (ov.signins || []).length ? `<table class="t"><thead><tr><th>When</th><th>Activity</th><th>IP address</th><th class="hide-sm">Device</th></tr></thead><tbody>${ov.signins.map(e => `<tr><td>${esc(PLAIN.when(e.ts))}</td><td>${esc(LBL[e.event] || e.event)}</td><td class="mono small">${esc(e.ip || "")}</td><td class="muted small hide-sm">${esc((e.user_agent || "").slice(0, 70))}</td></tr>`).join("")}</tbody></table>` : EMPTY("No sign-in activity yet");
+  const m = location.hash.match(/dispute=([0-9a-f]+)/);
+  if (m) { const el = $("#f-" + m[1]); if (el) { el.scrollIntoView({ block: "center" }); if ($("#d-" + m[1])) openDispute(m[1]); } history.replaceState(null, "", "/"); }
+}
+$("#out").onclick = async () => { await fetch("/api/auth/logout", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }); location.href = "/login"; };
+load().catch(e => console.error(e));
+</script>
+</body>
+</html>

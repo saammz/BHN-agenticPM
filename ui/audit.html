@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en-NG">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Audit log · BNH Compliance</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/bnh.css">
+<style>
+  .chain { min-width: 320px; padding: 14px 18px; }
+  .chain .st { font-weight: 600; } .chain .st.ok { color: var(--green); } .chain .st.bad { color: var(--red); }
+  .chain .k { font-family: var(--font-mono); font-size: 11px; color: var(--fg-subtle); word-break: break-all; margin-top: 4px; }
+  .cats { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 12px; }
+  .chip { border: 1px solid var(--line-strong); background: var(--surface); border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 12px; color: var(--fg-muted); font-weight: 500; display: inline-flex; align-items: center; }
+  .chip.on { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); } .chip b { color: var(--fg); font-weight: 600; margin-left: 6px; }
+  .filters { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+  .filters input, .filters select { width: auto; height: 36px; }
+  .filters input[type=text] { width: 220px; }
+  .filters label { color: var(--fg-muted); font-size: 13px; display: flex; gap: 6px; align-items: center; }
+  table.t th { position: sticky; top: 0; z-index: 2; }
+  tr.row { cursor: pointer; } tr.row:hover td { background: var(--surface-muted); } tr.open td { background: var(--accent-soft); }
+  .ev { font-family: var(--font-mono); font-size: 12px; white-space: nowrap; }
+  .cat { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 8px; }
+  .o { font-size: 11px; font-weight: 600; padding: 1px 6px; border-radius: 4px; border: 1px solid; text-transform: uppercase; letter-spacing: .04em; }
+  .o.success { background: var(--green-bg); color: var(--green); border-color: var(--green-line); }
+  .o.failure { background: var(--red-bg); color: var(--red); border-color: var(--red-line); }
+  .o.denied { background: var(--amber-bg); color: var(--amber); border-color: var(--amber-line); }
+  .role { font-size: 10px; font-weight: 600; color: var(--fg-muted); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; margin-left: 6px; }
+  .detail td { background: var(--surface-muted) !important; cursor: default; }
+  .detail pre { margin: 0; max-height: 420px; overflow: auto; background: var(--surface); }
+  .kv { display: grid; grid-template-columns: 120px 1fr; gap: 4px 12px; margin-bottom: 12px; font-size: 13px; } .kv div:nth-child(odd) { color: var(--fg-muted); }
+  .more { margin: 16px auto 0; display: flex; }
+  .count { color: var(--fg-muted); font-size: 13px; margin-left: auto; }
+  #rows td { font-size: 13px; }
+  #rows td:nth-child(1), #rows td:nth-child(2), #rows td:nth-child(6) { white-space: nowrap; font-family: var(--font-mono); font-size: 12px; }
+  #rows td:nth-child(7) { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-mono); font-size: 12px; }
+  #rows td:nth-child(5) { white-space: nowrap; }
+  #rows tr.detail td { white-space: normal; max-width: none; font-family: inherit; font-size: 13px; }
+</style>
+</head>
+<body>
+<header class="hdr">
+  <div class="rule" aria-hidden="true"></div>
+  <div class="wrap">
+    <div class="hrow">
+      <a class="brand" href="/"><span class="mark" aria-hidden="true">BNH</span><span class="name"><b>Compliance Assistant</b><small>System 3 · Reporting oversight</small></span></a>
+      <div class="hright"><a class="hbtn" href="/" style="text-decoration:none">Back to the assistant</a></div>
+    </div>
+    <nav class="tabs" aria-label="Primary"><a class="on" href="/audit">Audit log</a></nav>
+  </div>
+</header>
+<main class="wrap page-main">
+  <div class="pagehead">
+    <div><p class="eyebrow">Chief of Staff</p><h1>Audit log</h1>
+      <p class="desc">Every action, who performed it and from where. Records are append-only and chained together, so any alteration or deletion is detectable. Viewing and exporting this log are also recorded.</p></div>
+    <div class="actions">
+      <div class="card chain"><div class="st" id="chainSt">Integrity not yet verified</div><div class="muted small" id="chainInfo"></div>
+        <button class="btn sm" id="verify" style="margin-top:10px">Verify integrity</button></div>
+    </div>
+  </div>
+  <div class="cats" id="cats"></div>
+  <div class="card">
+    <div class="filters">
+      <input type="text" id="q" placeholder="Search event, person, IP address…">
+      <input type="text" id="actor" placeholder="Person (email)" style="width:180px">
+      <select id="outcome" style="width:160px"><option value="">Any outcome</option><option>success</option><option>failure</option><option>denied</option></select>
+      <label>From <input type="date" id="since"></label>
+      <label>To <input type="date" id="until"></label>
+      <input type="text" id="run" placeholder="Check (run) ID" style="width:200px">
+      <button class="btn sm ghost" id="clear">Clear filters</button>
+      <label><input type="checkbox" id="live" style="width:auto;height:auto"> Live</label>
+      <button class="btn sm" id="refresh">Refresh</button>
+      <a class="btn sm primary" id="export" href="/api/audit/export">Export CSV</a>
+      <span class="count" id="count"></span>
+    </div>
+    <div style="overflow-x:auto">
+    <table class="t">
+      <thead><tr><th>#</th><th>Time (WAT)</th><th>Event</th><th>Outcome</th><th>Performed by</th><th class="hide-sm">IP address</th><th class="hide-sm">Target</th><th>Summary</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+    </div>
+  </div>
+  <button class="btn more" id="more" hidden>Load older entries</button>
+</main>
+<footer class="foot"><div class="wrap">BNH · Compliance Assistant for System 3 Portfolio Reporting · Times in WAT (UTC+1)</div></footer>
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const COLORS = { auth: "#1e4a8a", access: "#c28a1a", http: "#8a93a3", run: "#234675", data: "#8a93a3", rules: "#b08d57", llm: "#5b4a8a",
+  decision: "#2a8659", review: "#9a4a6a", email: "#2f5d9e", override: "#a8641e", dispute: "#4a7a2a", user: "#2a6a7a", portfolio: "#556075",
+  webhook: "#b83a3a", audit: "#b08d57", system: "#14213a", pm: "#2f5d9e", settings: "#556075", legacy: "#c9cfd8" };
+let cat = "", rows = [], lastSeq = null, openId = null;
+async function api(url) {
+  const r = await fetch(url); if (r.status === 401) { location.href = "/login?next=/audit"; throw new Error("signed out"); }
+  if (r.status === 403) { location.href = "/"; throw new Error("forbidden"); }
+  const j = await r.json(); if (!r.ok) throw new Error(j.error || r.status); return j;
+}
+function params(extra) {
+  const p = new URLSearchParams();
+  if (cat) p.set("category", cat);
+  for (const [k, id] of [["q", "q"], ["actor", "actor"], ["outcome", "outcome"], ["run_id", "run"]]) if ($("#" + id).value.trim()) p.set(k, $("#" + id).value.trim());
+  if ($("#since").value) p.set("since", $("#since").value + "T00:00:00+01:00");
+  if ($("#until").value) p.set("until", $("#until").value + "T23:59:59.999999+01:00");
+  for (const [k, v] of Object.entries(extra || {})) p.set(k, v);
+  return p;
+}
+function rowHtml(r) {
+  const t = r.ts.replace("T", " ").slice(0, 19);
+  return `<tr class="row ${openId === r.id ? "open" : ""}" data-id="${r.id}">
+    <td class="mono muted">${r.seq}</td><td class="mono">${esc(t)}</td>
+    <td class="ev"><span class="cat" style="background:${COLORS[r.category] || "#777"}"></span>${esc(r.event)}</td>
+    <td><span class="o ${r.outcome}">${esc(r.outcome)}</span></td>
+    <td>${esc(r.actor)}<span class="role">${esc(r.actor_role || "")}</span></td>
+    <td class="mono hide-sm">${esc(r.ip || "")}</td>
+    <td class="mono hide-sm muted">${esc(r.target_type ? r.target_type + ":" : "")}${esc(r.target_id || "")}</td>
+    <td>${esc(r.summary || "")}</td></tr>` + (openId === r.id ? detailHtml(r) : "");
+}
+function detailHtml(r) {
+  return `<tr class="detail"><td colspan="8"><div class="kv">
+    <div>Entry id</div><div class="mono">${esc(r.id)}</div>
+    <div>Actor</div><div>${esc(r.actor)} (${esc(r.actor_role)})${r.actor_id ? ` · <span class="mono muted">${esc(r.actor_id)}</span>` : ""}</div>
+    <div>IP address</div><div class="mono">${esc(r.ip || "—")}</div>
+    <div>Device</div><div class="muted">${esc(r.user_agent || "—")}</div>
+    <div>Run</div><div class="mono">${esc(r.run_id || "—")}</div>
+    <div>Hash</div><div class="mono muted">${esc(r.hash)}</div>
+    <div>Previous hash</div><div class="mono muted">${esc(r.prev_hash)}</div></div>
+    <pre>${esc(JSON.stringify(r.data, null, 2))}</pre></td></tr>`;
+}
+function render() {
+  $("#rows").innerHTML = rows.length ? rows.map(rowHtml).join("") : `<tr><td colspan="8" class="muted" style="text-align:center;padding:40px">No audit entries match these filters.</td></tr>`;
+  $("#count").textContent = `${rows.length} shown`;
+  document.querySelectorAll("tr.row").forEach(tr => tr.onclick = () => { openId = openId === tr.dataset.id ? null : tr.dataset.id; render(); });
+  $("#export").href = "/api/audit/export?" + params().toString();
+}
+function renderCats(stats) {
+  if (!stats) return;
+  const total = Object.values(stats.by_category).reduce((a, b) => a + b, 0);
+  const keys = Object.keys(stats.by_category).sort((a, b) => stats.by_category[b] - stats.by_category[a]);
+  $("#cats").innerHTML = `<span class="chip ${cat ? "" : "on"}" data-c="">All<b>${total}</b></span>` +
+    keys.map(k => `<span class="chip ${cat === k ? "on" : ""}" data-c="${k}"><span class="cat" style="background:${COLORS[k] || "#777"}"></span>${k}<b>${stats.by_category[k]}</b></span>`).join("");
+  document.querySelectorAll(".chip").forEach(c => c.onclick = () => { cat = c.dataset.c; load(); });
+}
+async function load() {
+  const d = await api("/api/audit?" + params({ limit: 150 }).toString());
+  rows = d.rows; lastSeq = rows.length ? rows[rows.length - 1].seq : null;
+  $("#more").hidden = rows.length < 150; renderCats(d.stats); render();
+}
+async function more() {
+  const d = await api("/api/audit?" + params({ limit: 150, before_seq: lastSeq }).toString());
+  rows = rows.concat(d.rows); lastSeq = rows.length ? rows[rows.length - 1].seq : null;
+  $("#more").hidden = d.rows.length < 150; render();
+}
+async function verify() {
+  $("#verify").disabled = true; $("#chainSt").textContent = "Verifying…"; $("#chainSt").className = "st";
+  try {
+    const v = await api("/api/audit/verify");
+    $("#chainSt").textContent = v.ok ? `Integrity verified` : `Integrity problem at record ${v.broken_at}`;
+    $("#chainSt").className = "st " + (v.ok ? "ok" : "bad");
+    $("#chainInfo").innerHTML = v.ok ? `All ${v.checked} records intact · ${new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}<div class="k">${esc(v.head)}</div>` : esc(v.reason);
+  } catch (e) { $("#chainSt").textContent = e.message; }
+  finally { $("#verify").disabled = false; }
+}
+let deb; for (const id of ["q", "actor", "run"]) $("#" + id).oninput = () => { clearTimeout(deb); deb = setTimeout(load, 350); };
+for (const id of ["outcome", "since", "until"]) $("#" + id).onchange = load;
+$("#clear").onclick = () => { for (const id of ["q", "actor", "outcome", "since", "until", "run"]) $("#" + id).value = ""; cat = ""; load(); };
+$("#refresh").onclick = load; $("#more").onclick = more; $("#verify").onclick = verify;
+setInterval(() => { if ($("#live").checked) load(); }, 5000);
+const qp = new URLSearchParams(location.search); if (qp.get("run")) $("#run").value = qp.get("run"); if (qp.get("q")) $("#q").value = qp.get("q");
+load().then(verify);
+</script>
+</body>
+</html>

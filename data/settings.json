@@ -1,0 +1,12 @@
+{
+  "deadline_day": 10,
+  "reminder_window_days": 7,
+  "persistent_red_months": 3,
+  "cash_drop_threshold": 0.4,
+  "cos": { "name": "Chief of Staff", "email": "cos@bnh.example" },
+  "rag_definitions": {
+    "GREEN": "On track",
+    "AMBER": "At risk, mitigation in place",
+    "RED": "Off track, CoS intervention needed"
+  }
+}

@@ -1,0 +1,628 @@
+<!doctype html>
+<html lang="en-NG">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Compliance Assistant · BNH</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/bnh.css">
+<style>
+  .page { display: none; } .page.on { display: block; }
+  .kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .stat.click { cursor: pointer; transition: border-color .15s; } .stat.click:hover { border-color: var(--line-strong); }
+  .stat .v.neg { color: var(--negative); } .stat .v.acc { color: var(--accent); }
+  .grid2 { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 24px; margin-bottom: 24px; align-items: start; }
+  .lastcheck { font-size: 13px; color: var(--fg-muted); }
+
+  .q { padding: 20px 24px; border-bottom: 1px solid var(--line); }
+  .q:last-child { border-bottom: 0; }
+  .q.compact { padding: 14px 24px; }
+  .q h3 { margin: 0; font-size: 15px; font-weight: 600; } .q.compact h3 { font-size: 14px; }
+  .q .meta { margin-top: 4px; font-size: 13px; color: var(--fg-muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .q .what { margin: 12px 0 0; font-size: 14px; }
+  .q .ai { margin: 12px 0 0; padding: 10px 14px; border-left: 3px solid var(--accent); background: var(--accent-soft); border-radius: 0 6px 6px 0; font-size: 14px; }
+  .q .ai b, .q .why b { font-weight: 600; }
+  .q .why { margin: 10px 0 0; padding: 10px 14px; background: var(--surface-muted); border: 1px solid var(--line); border-radius: 6px; font-size: 14px; }
+  .q .acts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+  .q textarea { margin-top: 12px; }
+  .q .open { margin-left: auto; font-size: 13px; text-decoration: none; font-weight: 500; }
+
+  .act { display: flex; gap: 12px; padding: 12px 24px; border-bottom: 1px solid var(--line); align-items: flex-start; }
+  .act:last-child { border-bottom: 0; }
+  .act .i { width: 28px; height: 28px; border-radius: 6px; display: grid; place-items: center; flex: none; background: var(--surface-muted); border: 1px solid var(--line); color: var(--fg-muted); }
+  .act .i.navy { color: var(--accent); background: var(--accent-soft); border-color: rgba(30,74,138,.2); }
+  .act .i.green { color: var(--green); background: var(--green-bg); border-color: var(--green-line); }
+  .act .i.amber { color: var(--amber); background: var(--amber-bg); border-color: var(--amber-line); }
+  .act .i.red { color: var(--red); background: var(--red-bg); border-color: var(--red-line); }
+  .act .s { flex: 1; min-width: 0; font-size: 14px; } .act .w { color: var(--fg-subtle); font-size: 12px; margin-top: 2px; }
+  .filters { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .fchip { border: 1px solid var(--line-strong); background: var(--surface); border-radius: 6px; padding: 6px 12px; cursor: pointer; color: var(--fg-muted); font-size: 13px; font-weight: 500; }
+  .fchip.on { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+
+  .scrim { position: fixed; inset: 0; background: rgba(10, 24, 48, 0.25); opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 40; }
+  .scrim.open { opacity: 1; pointer-events: auto; }
+  .drawer { position: fixed; top: 0; right: 0; bottom: 0; width: 600px; max-width: 100%; background: var(--surface); border-left: 1px solid var(--line);
+    box-shadow: var(--shadow-pop); transform: translateX(102%); transition: transform .22s ease; z-index: 50; display: flex; flex-direction: column; }
+  .drawer.open { transform: none; }
+  .drawer .dh { display: flex; align-items: flex-start; gap: 12px; padding: 20px 24px; border-bottom: 1px solid var(--line); }
+  .drawer .dh .eyebrow { font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--gold); margin: 0; }
+  .drawer .dh h2 { margin: 2px 0 0; font-size: 18px; font-weight: 600; }
+  .drawer .db { overflow: auto; padding: 4px 24px 32px; flex: 1; }
+  .drawer h4 { margin: 24px 0 10px; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--fg-muted); font-weight: 600; }
+  .x { margin-left: auto; background: none; border: 1px solid transparent; color: var(--fg-muted); width: 32px; height: 32px; border-radius: 6px; cursor: pointer; display: grid; place-items: center; }
+  .x:hover { background: var(--surface-muted); border-color: var(--line); color: var(--fg); }
+  .issue { border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; margin-bottom: 8px; }
+  .issue b { font-weight: 600; } .issue .k { font-size: 12.5px; color: var(--fg-muted); margin-top: 2px; } .issue p { margin: 6px 0 0; font-size: 14px; }
+
+  .set { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 24px; align-items: start; }
+  .setnav { position: sticky; top: 16px; padding: 8px; }
+  .setnav a { display: block; padding: 8px 12px; border-radius: 6px; color: var(--fg-muted); text-decoration: none; cursor: pointer; font-size: 14px; font-weight: 500; }
+  .setnav a:hover { background: var(--surface-muted); color: var(--fg); }
+  .setnav a.on { background: var(--accent-soft); color: var(--accent); }
+  .sect { display: none; } .sect.on { display: block; }
+  .sect .card { margin-bottom: 20px; }
+  .radios { display: grid; gap: 10px; }
+  .radio { display: flex; gap: 12px; align-items: flex-start; border: 1px solid var(--line-strong); border-radius: 6px; padding: 12px 14px; cursor: pointer; background: var(--surface); }
+  .radio:hover { background: var(--surface-muted); }
+  .radio:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+  .radio input { margin-top: 3px; accent-color: var(--accent); width: 16px; height: 16px; flex: none; }
+  .radio b { display: block; font-weight: 600; } .radio span { display: block; color: var(--fg-muted); font-size: 13px; }
+  .sentence { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 14px 0; border-bottom: 1px solid var(--line); }
+  .sentence:first-child { padding-top: 0; } .sentence:last-child { border-bottom: 0; padding-bottom: 0; }
+  .sentence input[type=number] { width: 76px; text-align: center; display: inline-block; }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .row > input, .row > select { width: auto; }
+  .savebar { display: flex; align-items: center; justify-content: space-between; gap: 16px; border-top: 1px solid var(--line); padding: 16px 24px; }
+  .savebar p { margin: 0; font-size: 12px; color: var(--fg-muted); }
+  .switch { display: flex; align-items: center; gap: 12px; cursor: pointer; font-weight: 500; }
+  .switch input { appearance: none; -webkit-appearance: none; width: 40px; height: 22px; border-radius: 11px; background: var(--line-strong); position: relative; cursor: pointer; transition: background .2s; flex: none; margin: 0; border: 0; padding: 0; }
+  .switch input::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: left .2s; box-shadow: 0 1px 2px rgba(0,0,0,.2); }
+  .switch input:checked { background: var(--accent); } .switch input:checked::after { left: 21px; }
+  .switch.danger input:checked { background: var(--red-dot); }
+  .conn { display: flex; gap: 12px; align-items: center; padding: 12px 16px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface-muted); flex-wrap: wrap; }
+  .conn .st { flex: 1; min-width: 220px; font-size: 14px; }
+  input[type=range] { width: 100%; max-width: 360px; accent-color: var(--accent); }
+  .saved { color: var(--green); font-size: 13px; font-weight: 500; } .error { color: var(--red); font-size: 13px; font-weight: 500; }
+  .user { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .user:last-child { border-bottom: 0; }
+  .user .who { flex: 1; min-width: 0; } .user .who .k { color: var(--fg-muted); font-size: 13px; }
+  .how-frame { width: 100%; height: calc(100vh - 260px); min-height: 640px; border: 0; display: block; border-radius: 0 0 8px 8px; }
+
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(16px); background: var(--navy-900); color: #fff; border-radius: 6px;
+    padding: 12px 16px; box-shadow: var(--shadow-pop); opacity: 0; transition: .2s; z-index: 60; display: flex; gap: 12px; align-items: center; font-size: 14px; pointer-events: none; }
+  .toast.on { opacity: 1; transform: translateX(-50%); pointer-events: auto; }
+  .toast a { color: #e4c48f; font-weight: 600; }
+
+  @media (max-width: 1100px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .grid2 { grid-template-columns: minmax(0, 1fr); } .set { grid-template-columns: minmax(0, 1fr); } .setnav { position: static; display: flex; flex-wrap: wrap; } }
+</style>
+</head>
+<body>
+<header class="hdr">
+  <div class="rule" aria-hidden="true"></div>
+  <div class="wrap">
+    <div class="hrow">
+      <a class="brand" href="#overview" aria-label="Compliance Assistant home"><span class="mark" aria-hidden="true">BNH</span>
+        <span class="name"><b>Compliance Assistant</b><small>System 3 · Reporting oversight</small></span></a>
+      <div class="hright">
+        <span class="statuspill hide-sm" id="assistCard" title=""><span class="dot"></span><span id="assistState">Assistant</span></span>
+        <div class="hwho"><b id="meName">…</b><small>Chief of Staff</small></div>
+        <button class="hbtn" id="logout">Sign out</button>
+      </div>
+    </div>
+    <nav class="tabs" aria-label="Primary">
+      <a href="#overview" data-p="overview">Overview</a>
+      <a href="#decisions" data-p="decisions">Needs your decision <span class="n" id="navN" style="display:none"></span></a>
+      <a href="#portfolios" data-p="portfolios">Portfolios</a>
+      <a href="#activity" data-p="activity">Activity</a>
+      <a href="#how" data-p="how">Workflow</a>
+      <a href="#settings" data-p="settings">Settings</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap page-main">
+  <div class="pagehead">
+    <div><p class="eyebrow">Chief of Staff</p><h1 id="title">Overview</h1><p class="desc" id="desc"></p></div>
+    <div class="actions"><span class="lastcheck" id="lastCheck"></span><button class="btn primary" id="checkNow">Run check now</button></div>
+  </div>
+  <div id="content">
+
+    <section class="page" id="p-overview">
+      <div id="banners"></div>
+      <div class="kpis">
+        <div class="stat click" data-go="portfolios"><p class="l">Portfolios on track</p><div class="v" id="kOnTrack">–</div><div class="d" id="kOnTrackD"></div></div>
+        <div class="stat click" data-go="decisions"><p class="l">Awaiting your decision</p><div class="v acc" id="kNeeds">–</div><div class="d">Reminders, alerts and disputes</div></div>
+        <div class="stat click" data-go="activity"><p class="l">Reminders this month</p><div class="v" id="kRem">–</div><div class="d" id="kRemD"></div></div>
+        <div class="stat click" data-go="portfolios"><p class="l">Updates overdue</p><div class="v" id="kOver">–</div><div class="d">Past the submission deadline</div></div>
+      </div>
+      <div class="grid2">
+        <div class="card"><div class="card-h"><div><h2>Awaiting your decision</h2><p>Cases where the assistant wants a person to decide.</p></div><a href="#decisions">View all</a></div><div id="ovDecisions"></div></div>
+        <div class="card"><div class="card-h"><div><h2>Recent activity</h2><p>What the assistant and your team did.</p></div><a href="#activity">View all</a></div><div id="ovActivity"></div></div>
+      </div>
+      <div class="card"><div class="card-h"><div><h2>Portfolios</h2><p>Current compliance status of every portfolio.</p></div><a href="#portfolios">Details</a></div><div class="card-b flush" id="ovPortfolios"></div></div>
+    </section>
+
+    <section class="page" id="p-decisions">
+      <div class="card"><div id="decList"></div></div>
+      <div class="card" style="margin-top:24px"><div class="card-h"><div><h2>Recently decided</h2></div></div><div id="decDone"></div></div>
+    </section>
+
+    <section class="page" id="p-portfolios">
+      <div class="card"><div class="card-b flush" id="portTable"></div></div>
+    </section>
+
+    <section class="page" id="p-activity">
+      <div class="filters" id="actFilters"></div>
+      <div class="card"><div id="actList"></div></div>
+    </section>
+
+    <section class="page" id="p-how">
+      <div class="card"><div class="card-h"><div><h2>Workflow nodes</h2><p>Select a node to inspect it. Select <b>Run check now</b> to watch the nodes run live; earlier checks can be replayed from the list.</p></div><a class="btn sm" href="/workflow" target="_blank">Open full workflow view</a></div>
+        <iframe id="howFrame" class="how-frame" title="How the assistant works"></iframe></div>
+    </section>
+
+    <section class="page" id="p-settings">
+      <div class="set">
+        <div class="card setnav" id="setnav">
+          <a data-s="assistant">Assistant</a><a data-s="rules">Reporting rules</a><a data-s="ai">AI review</a><a data-s="email">Email</a>
+          <a data-s="team">Team &amp; access</a><a data-s="exceptions">Exceptions</a><a data-s="security">Security &amp; history</a><a data-s="advanced">Advanced</a>
+        </div>
+        <div>
+          <div class="sect" id="s-assistant">
+            <div class="card"><div class="card-h"><div><h3>Operating mode</h3><p>How much the assistant does on its own. You can change this at any time.</p></div></div>
+              <div class="card-b"><div class="radios" id="modeRadios"></div></div></div>
+            <div class="card"><div class="card-h"><div><h3>Daily check</h3><p>The assistant also checks whenever a manager submits or edits an update.</p></div></div>
+              <div class="card-b"><label class="switch"><input type="checkbox" id="dailyOn"><span>Check every day</span></label>
+                <div class="field" style="margin:16px 0 0;max-width:240px"><label class="flabel" for="dailyTime">Time (WAT)</label><input type="time" id="dailyTime" value="08:00"></div></div></div>
+            <div class="card"><div class="card-h"><div><h3>Pause the assistant</h3><p>While paused it keeps checking but sends nothing. Use this if something looks wrong.</p></div></div>
+              <div class="card-b"><label class="switch danger"><input type="checkbox" id="pausedSw"><span id="pausedLbl">Running</span></label></div>
+              <div class="savebar"><p>Changes apply immediately and are recorded in the audit history.</p><div class="row"><span id="m-assistant"></span><button class="btn primary" data-save="assistant">Save settings</button></div></div></div>
+          </div>
+          <div class="sect" id="s-rules">
+            <div class="card"><div class="card-h"><div><h3>Reporting rules</h3><p>The standards every portfolio is checked against.</p></div></div>
+              <div class="card-b">
+                <div class="sentence">Monthly updates are due by day <input type="number" id="r_deadline_day" min="1" max="28"> of the following month.</div>
+                <div class="sentence">Send a reminder <input type="number" id="r_reminder_window_days" min="1" max="20"> days before the deadline if an update has not arrived.</div>
+                <div class="sentence">Alert me when a portfolio has been Red for <input type="number" id="r_persistent_red_months" min="2" max="12"> consecutive months.</div>
+                <div class="sentence">Question a Green status if cash falls by more than <input type="number" id="r_cash_pct" min="10" max="90"> % in a month.</div>
+              </div>
+              <div class="savebar"><p>Applies from the next check.</p><div class="row"><span id="m-rules"></span><button class="btn primary" data-save="rules">Save settings</button></div></div></div>
+          </div>
+          <div class="sect" id="s-ai">
+            <div class="card"><div class="card-h"><div><h3>AI connection</h3><p>The AI reads each update like an analyst. It never sends anything itself.</p></div></div>
+              <div class="card-b"><div class="conn"><div class="st" id="orState"></div><button class="btn sm" data-test="openrouter">Test</button><button class="btn sm" data-replace="openrouter">Replace key</button></div>
+                <div class="row" id="orReplace" style="display:none;margin-top:12px"><input type="password" id="orKey" placeholder="Paste OpenRouter key (sk-or-…)" style="width:360px"><button class="btn primary sm" data-savekey="openrouter">Save key</button></div>
+                <div id="m-openrouter" style="margin-top:8px"></div></div></div>
+            <div class="card"><div class="card-h"><div><h3>Reviewer</h3></div></div>
+              <div class="card-b"><div class="radios">
+                  <label class="radio"><input type="radio" name="llm" value="openrouter"><div><b>AI review (recommended)</b><span>Real AI judgement on every portfolio.</span></div></label>
+                  <label class="radio"><input type="radio" name="llm" value="mock"><div><b>Demonstration reviewer</b><span>A built-in stand-in for demonstrations. No AI provider and no cost.</span></div></label></div>
+                <div class="field" style="margin:20px 0 0;max-width:420px"><label class="flabel" for="model">AI model</label><select id="model"></select><div class="hint" id="modelNote"></div></div></div></div>
+            <div class="card"><div class="card-h"><div><h3>Confidence thresholds</h3><p>How sure the AI must be before acting.</p></div></div>
+              <div class="card-b">
+                <div class="field"><label class="flabel" for="confAuto">Send AI-judged reminders automatically at <span id="autoV"></span> confidence or above</label><input type="range" id="confAuto" min="50" max="99" step="1"></div>
+                <div class="field"><label class="flabel" for="confMin">Below <span id="minV"></span>, ask me about everything, including standard rules</label><input type="range" id="confMin" min="30" max="95" step="1"></div>
+                <p class="muted small" style="margin:0">Alerts that come from AI judgement always wait for your approval, whatever these are set to.</p></div>
+              <div class="savebar"><p>Applies from the next check.</p><div class="row"><span id="m-ai"></span><button class="btn primary" data-save="ai">Save settings</button></div></div></div>
+          </div>
+          <div class="sect" id="s-email">
+            <div class="card"><div class="card-h"><div><h3>Email connection</h3><p>Emails are sent through Resend from your verified domain. Sign-in codes are always sent.</p></div></div>
+              <div class="card-b"><div class="conn"><div class="st" id="rsState"></div><button class="btn sm" data-test="resend">Send me a test</button><button class="btn sm" data-replace="resend">Replace key</button></div>
+                <div class="row" id="rsReplace" style="display:none;margin-top:12px"><input type="password" id="rsKey" placeholder="Paste Resend key (re_…)" style="width:360px"><button class="btn primary sm" data-savekey="resend">Save key</button></div>
+                <div id="m-resend" style="margin-top:8px"></div>
+                <div class="field" style="margin:20px 0 0;max-width:460px"><label class="flabel" for="emailFrom">Send from</label><input type="text" id="emailFrom" placeholder="BNH Compliance <agent@yourdomain.com>"></div></div></div>
+            <div class="card"><div class="card-h"><div><h3>Reminders and alerts</h3><p>What happens to the emails the assistant writes.</p></div></div>
+              <div class="card-b"><div class="radios">
+                  <label class="radio"><input type="radio" name="deliv" value="simulated"><div><b>Practice (do not send)</b><span>Emails are written and listed under Activity, but nobody receives them.</span></div></label>
+                  <label class="radio"><input type="radio" name="deliv" value="redirect"><div><b>Send everything to one test inbox</b><span>Real emails, all delivered to the address below.</span>
+                    <div style="margin-top:8px;max-width:320px"><input type="email" id="redirectTo" placeholder="you@company.com"></div></div></label>
+                  <label class="radio"><input type="radio" name="deliv" value="resend"><div><b>Send to the intended recipients</b><span>Portfolio managers and you receive the emails.</span></div></label></div></div>
+              <div class="savebar"><p>Applies from the next email.</p><div class="row"><span id="m-email"></span><button class="btn primary" data-save="email">Save settings</button></div></div></div>
+          </div>
+          <div class="sect" id="s-team">
+            <div class="card"><div class="card-h"><div><h3>Add a person</h3><p>People sign in with a one-time code sent to their email, so there are no passwords to manage.</p></div></div>
+              <div class="card-b"><div class="row"><input type="text" id="uName" placeholder="Full name" style="width:200px"><input type="email" id="uEmail" placeholder="name@company.com" style="width:240px">
+                <select id="uRole" style="width:200px"><option value="PM">Portfolio manager</option><option value="COS">Chief of Staff</option></select><button class="btn primary" id="addUser">Add person</button></div>
+                <div id="m-team" style="margin-top:8px"></div></div></div>
+            <div class="card"><div class="card-h"><div><h3>Portfolio managers</h3><p>Reminders for a portfolio go to the person selected here.</p></div></div><div class="card-b flush" id="ownership"></div></div>
+            <div class="card"><div class="card-h"><div><h3>People with access</h3></div></div><div class="card-b" id="people" style="padding-top:4px;padding-bottom:4px"></div></div>
+          </div>
+          <div class="sect" id="s-exceptions">
+            <div class="card"><div class="card-h"><div><h3>Add an exception</h3><p>Tell the assistant to leave something alone, for example when an extension has been agreed.</p></div></div>
+              <div class="card-b"><div class="row"><select id="exP" style="width:240px"></select><select id="exR" style="width:300px"></select><select id="exM" style="width:180px"></select></div>
+                <div class="row" style="margin-top:12px"><span class="muted">Until</span><input type="date" id="exU" style="width:180px"><input type="text" id="exW" placeholder="Reason (e.g. extension agreed with CoS)" style="flex:1;min-width:240px;width:auto"><button class="btn primary" id="addEx">Add exception</button></div>
+                <div id="m-ex" style="margin-top:8px"></div></div></div>
+            <div class="card"><div class="card-h"><div><h3>Current exceptions</h3></div></div><div id="exList"></div></div>
+          </div>
+          <div class="sect" id="s-security">
+            <div class="card"><div class="card-h"><div><h3>Audit history</h3><p>Every sign-in, email, decision and settings change, with who did it and from where. Records cannot be edited.</p></div></div>
+              <div class="card-b"><div class="row"><a class="btn" href="/audit" target="_blank">Open audit log</a><button class="btn" id="verifyBtn">Verify integrity</button><span id="verifyMsg"></span></div></div></div>
+            <div class="card"><div class="card-h"><div><h3>Recent sign-in activity</h3></div></div><div id="signins"></div></div>
+          </div>
+          <div class="sect" id="s-advanced">
+            <div class="card"><div class="card-h"><div><h3>Demonstration date</h3><p>Run checks as if it were another date. Leave empty to use today's date.</p></div></div>
+              <div class="card-b"><div class="row"><input type="date" id="asOf" style="width:200px"><button class="btn sm ghost" id="clearAsOf">Use today's date</button></div></div>
+              <div class="savebar"><p>Applies from the next check.</p><div class="row"><span id="m-advanced"></span><button class="btn primary" data-save="advanced">Save settings</button></div></div></div>
+            <div class="card"><div class="card-h"><div><h3>Technical view</h3><p>The full workflow canvas with every technical detail and log.</p></div></div><div class="card-b"><a class="btn" href="/workflow" target="_blank">Open technical view</a></div></div>
+            <div class="card"><div class="card-h"><div><h3>System</h3></div></div><div class="card-b"><div id="sysInfo" class="muted"></div><div class="row" style="margin-top:12px"><button class="btn sm" data-test="database">Test database</button><span id="m-database"></span></div></div></div>
+            <div class="card" style="border-color:var(--red-line)"><div class="card-h"><div><h3>Start over</h3><p>Clears the assistant's findings, emails, decisions and exceptions. Portfolios, people and the audit history are kept.</p></div></div>
+              <div class="card-b"><button class="btn danger" id="resetBtn">Clear the assistant's activity</button></div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+<footer class="foot"><div class="wrap">BNH · Compliance Assistant for System 3 Portfolio Reporting · All amounts in NGN · Times in WAT (UTC+1)</div></footer>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" aria-label="Portfolio details"><div class="dh"><div><p class="eyebrow">Portfolio</p><h2 id="dTitle"></h2></div><button class="x" id="dClose" aria-label="Close"></button></div><div class="db" id="dBody"></div></aside>
+<div class="toast" id="toast" role="status"></div>
+
+<script src="/plain.js"></script>
+<script>
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const SVG = p => `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
+const ICON = {
+  mail: SVG('<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>'),
+  check: SVG('<path d="m5 12 5 5L20 7"/>'), x: SVG('<path d="M6 6l12 12M18 6 6 18"/>'),
+  hand: SVG('<circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/>'), scale: SVG('<path d="M12 3v18M5 7h14M7 7l-3 7a3 3 0 0 0 6 0L7 7Zm10 0-3 7a3 3 0 0 0 6 0l-3-7Z"/>'),
+  shield: SVG('<path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6l-8-3Z"/>'), search: SVG('<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>'),
+  user: SVG('<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>'), gear: SVG('<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/>'),
+  alert: SVG('<path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/>'),
+  key: SVG('<circle cx="8" cy="15" r="4"/><path d="m10.8 12.2 9.2-9.2M17 6l3 3"/>'), pause: SVG('<path d="M9 5v14M15 5v14"/>'), play: SVG('<path d="m7 4 13 8-13 8V4Z"/>'),
+  folder: SVG('<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/>'), lock: SVG('<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>'),
+  close: SVG('<path d="M6 6l12 12M18 6 6 18"/>'), list: SVG('<path d="M4 7h16M4 12h16M4 17h10"/>'),
+};
+$("#dClose").innerHTML = ICON.close;
+const EMPTY = (title, text) => `<div class="empty sm"><div class="ico">${ICON.list}</div><b>${esc(title)}</b>${text ? `<p>${esc(text)}</p>` : ""}</div>`;
+async function api(url, opt) {
+  const r = await fetch(url, opt);
+  if (r.status === 401) { location.href = "/login"; throw new Error("signed out"); }
+  const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.error || "Something went wrong"); return j;
+}
+const post = (url, body) => api(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body || {}) });
+function toast(html, ms = 4500) { const t = $("#toast"); t.innerHTML = html; t.classList.add("on"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("on"), ms); }
+function msg(id, text, ok = true) { const el = $("#" + id); if (!el) return; el.className = ok ? "saved" : "error"; el.textContent = text; if (ok) setTimeout(() => { if (el.textContent === text) el.textContent = ""; }, 3500); }
+
+const STATUS = { on_track: ["On track", "green"], reminded: ["Reminder sent", "amber"], needs_you: ["Awaiting your decision", "navy"], overdue: ["Update overdue", "red"], exception: ["Exception in place", "grey"] };
+const statusPill = s => `<span class="pill ${STATUS[s][1]}">${STATUS[s][0]}</span>`;
+const ragPill = r => `<span class="pill ${r}">${esc(PLAIN.rag(r))}</span>`;
+let OV = null, PORTS = {}, ME = null, SETTINGS = null;
+
+const PAGES = {
+  overview: ["Compliance overview", "Where every portfolio stands against BNH's monthly reporting rules, and what needs your attention."],
+  decisions: ["Awaiting your decision", "The assistant handles routine reminders on its own. These are the cases where it wants a person to decide."],
+  portfolios: ["Portfolios", "Compliance status, latest update and history for each portfolio. Select a portfolio for details."],
+  activity: ["Activity", "Everything the assistant and your team have done, most recent first."],
+  how: ["Workflow", "The live workflow: every step the assistant takes on a check, shown as connected nodes. Select a node to see exactly what it did."],
+  settings: ["Settings", "Every setting ships with a sensible default. Changes take effect immediately and are recorded in the audit history."],
+};
+function route() {
+  let [page, sub] = (location.hash.slice(1) || "overview").split("/");
+  if (!PAGES[page]) page = "overview";
+  $$(".page").forEach(p => p.classList.toggle("on", p.id === "p-" + page));
+  $$(".tabs a").forEach(a => a.classList.toggle("on", a.dataset.p === page));
+  $("#title").textContent = PAGES[page][0]; $("#desc").textContent = PAGES[page][1];
+  document.title = `${PAGES[page][0]} · BNH Compliance`;
+  if (page === "how" && !$("#howFrame").src) $("#howFrame").src = "/workflow?embed=1&log=1";
+  ({ overview: loadOverview, decisions: loadDecisions, portfolios: loadPortfolios, activity: loadActivity, settings: () => loadSettings(sub) })[page]?.();
+}
+addEventListener("hashchange", route);
+$$(".stat.click").forEach(k => k.onclick = () => location.hash = k.dataset.go);
+
+function setPorts(ov) { OV = ov; PORTS = Object.fromEntries(ov.portfolios.map(p => [p.id, p])); paintAssistant(); }
+function paintAssistant() {
+  if (!OV) return;
+  const a = OV.assistant, card = $("#assistCard");
+  card.className = "statuspill hide-sm" + (a.paused ? " paused" : a.mode === "shadow" || a.emails === "simulated" ? " practice" : "");
+  $("#assistState").textContent = a.paused ? "Assistant paused" : `Assistant: ${PLAIN.mode[a.mode][0]}`;
+  card.title = a.paused ? "Checking, but sending nothing." : a.emails === "simulated" ? "Emails are in practice mode (not sent)." : a.emails === "redirect" ? `Emails go to ${a.redirect_to}.` : "Emails go to the intended recipients.";
+  const lc = OV.last_check;
+  $("#lastCheck").textContent = (lc ? `Last checked ${PLAIN.when(new Date(lc.at * 1000).toISOString())}` : "Not checked yet") + (OV.next_check ? ` · Next ${PLAIN.when(OV.next_check)}` : "");
+  const n = OV.kpis.needs_you; $("#navN").style.display = n ? "" : "none"; $("#navN").textContent = n;
+}
+
+async function loadOverview() {
+  const [ov, rev, disp, act] = await Promise.all([api("/api/overview"), api("/api/review"), api("/api/disputes"), api("/api/activity?limit=40")]);
+  setPorts(ov);
+  const k = ov.kpis, attn = k.total - k.on_track;
+  $("#kOnTrack").textContent = `${k.on_track} of ${k.total}`; $("#kOnTrackD").textContent = attn ? `${attn} need${attn === 1 ? "s" : ""} attention` : "All portfolios compliant";
+  $("#kNeeds").textContent = k.needs_you; $("#kRem").textContent = k.reminders_this_month;
+  $("#kRemD").textContent = ov.assistant.emails === "simulated" ? "Practice mode: not delivered" : "Sent to portfolio managers";
+  $("#kOver").textContent = k.overdue; $("#kOver").className = "v" + (k.overdue ? " neg" : "");
+  let b = "";
+  if (ov.assistant.paused) b += `<div class="alert danger"><div class="t"><b>The assistant is paused.</b> It is still checking, but it will not send anything.</div><button class="btn sm" onclick="setPaused(false)">Resume</button></div>`;
+  if (!ov.last_check) b += `<div class="alert info"><div class="t"><b>No check has run yet.</b> Select <b>Run check now</b> to see where every portfolio stands.</div></div>`;
+  else if (ov.assistant.emails === "simulated") b += `<div class="alert warning"><div class="t"><b>Practice mode.</b> Emails are written and listed under Activity, but nobody receives them.</div><a class="btn sm" href="#settings/email">Change</a></div>`;
+  $("#banners").innerHTML = b;
+  const items = decisionItems(rev, disp);
+  $("#ovDecisions").innerHTML = items.length ? items.slice(0, 4).map(i => i.html(true)).join("") : EMPTY("Nothing needs you right now", "The assistant will list cases here when it wants a person to decide.");
+  $("#ovActivity").innerHTML = renderActivity(act.filter(isUseful).slice(0, 6)) || EMPTY("No activity yet");
+  $("#ovPortfolios").innerHTML = portfolioTable(ov.portfolios, true);
+  bindPortfolioRows();
+}
+
+function pmOf(pid) { return (PORTS[pid] || {}).pm_name || "the portfolio manager"; }
+function decisionItems(rev, disp) {
+  const out = [];
+  for (const d of disp.filter(d => d.status === "OPEN")) {
+    const p = PORTS[d.portfolio_id] || {};
+    out.push({ html: compact => `<div class="q ${compact ? "compact" : ""}">
+      <h3>${esc(p.pm_name || d.raised_by_email)} disputes a finding on ${esc(p.name || d.portfolio_id)}</h3>
+      <div class="meta"><span class="badge info">Dispute</span>${esc(PLAIN.rule(d.rule_id))} · ${esc(PLAIN.month(d.reporting_month))}${compact ? `<a class="open" href="#decisions">Review</a>` : ""}</div>
+      ${compact ? "" : `<div class="why"><b>Their explanation:</b> ${esc(d.message)}</div>
+      <textarea id="dn-${d.id}" placeholder="Note to ${esc(p.pm_name || "the manager")} (required if you keep the finding)"></textarea>
+      <div class="acts"><button class="btn primary" onclick="decideDispute('${d.id}','uphold')">Accept: drop the finding</button>
+        <button class="btn" onclick="decideDispute('${d.id}','deny')">Keep the finding</button></div>`}</div>` });
+  }
+  for (const i of rev.filter(i => i.status === "pending")) {
+    const f = i.finding, pname = f.portfolio_name || f.portfolio_id;
+    const q = i.action_type === "remind_pm" ? `Send ${pmOf(f.portfolio_id)} a reminder about ${pname}?`
+      : i.action_type === "escalate_cos" ? `Flag ${pname} as requiring your intervention?` : `Review ${pname}`;
+    const yes = i.action_type === "remind_pm" ? "Send reminder" : i.action_type === "escalate_cos" ? "Flag for intervention" : "Ask the manager to correct it";
+    const sev = { HIGH: "danger", CRITICAL: "danger", MEDIUM: "warning", LOW: "" }[f.severity] || "";
+    out.push({ html: compact => `<div class="q ${compact ? "compact" : ""}">
+      <h3>${esc(q)}</h3>
+      <div class="meta"><span class="badge ${sev}">${esc(PLAIN.severity(f.severity))}</span>${esc(PLAIN.rule(f.rule_id))} · ${esc(PLAIN.month(f.reporting_month))}${compact ? `<a class="open" href="#decisions">Review</a>` : ""}</div>
+      ${compact ? "" : `<p class="what">${esc(f.rationale)}</p>
+      ${f.llm_note ? `<div class="ai"><b>AI assessment:</b> ${esc(f.llm_note)}</div>` : ""}
+      <div class="why"><b>Why this needs you:</b> ${esc(PLAIN.why(i.reason))}</div>
+      <div class="acts"><button class="btn primary" onclick="decide('${i.id}','approve')">${yes}</button>
+        <button class="btn" onclick="decide('${i.id}','reject')">No action needed</button>
+        <button class="btn danger" onclick="decide('${i.id}','reject',true)">Incorrect: do not raise again</button></div>`}</div>` });
+  }
+  return out;
+}
+async function loadDecisions() {
+  const [ov, rev, disp] = await Promise.all([api("/api/overview"), api("/api/review"), api("/api/disputes")]);
+  setPorts(ov);
+  const items = decisionItems(rev, disp);
+  $("#decList").innerHTML = items.length ? items.map(i => i.html(false)).join("") : EMPTY("Nothing needs you right now", "The assistant will list cases here when it wants a person to decide.");
+  const done = rev.filter(i => i.status !== "pending").slice(0, 12), ddone = disp.filter(d => d.status !== "OPEN").slice(0, 6);
+  $("#decDone").innerHTML = done.map(i => `<div class="act"><div class="i ${i.status === "approved" ? "green" : ""}">${i.status === "approved" ? ICON.check : ICON.x}</div><div class="s">${esc(i.status === "approved" ? "Approved" : "Declined")}: ${esc(PLAIN.action(i.action_type).toLowerCase())} for ${esc(i.finding.portfolio_name || i.finding.portfolio_id)} (${esc(PLAIN.rule(i.finding.rule_id))})<div class="w">${esc(i.decided_by || "")} · ${esc(PLAIN.when(i.decided_at))}</div></div></div>`).join("")
+    + ddone.map(d => `<div class="act"><div class="i navy">${ICON.scale}</div><div class="s">Dispute ${d.status === "UPHELD" ? "accepted" : "not accepted"}: ${esc(PLAIN.rule(d.rule_id))} for ${esc((PORTS[d.portfolio_id] || {}).name || d.portfolio_id)}<div class="w">${esc(d.decided_by || "")} · ${esc(PLAIN.when(d.decided_at))}</div></div></div>`).join("")
+    || EMPTY("Nothing decided yet");
+}
+async function decide(id, decision, dismiss) {
+  try { await post(`/api/review/${id}`, { decision, dismiss: !!dismiss });
+    toast(decision === "approve" ? "Done. The email has been sent." : dismiss ? "Recorded. The assistant will not raise this again." : "Recorded. Nothing will be sent."); }
+  catch (e) { toast(esc(e.message)); }
+  route();
+}
+async function decideDispute(id, decision) {
+  const note = ($("#dn-" + id) || {}).value || "";
+  if (decision === "deny" && !note.trim()) { toast("Please add a short note so the manager knows why."); $("#dn-" + id).focus(); return; }
+  try { await post(`/api/disputes/${id}`, { decision, note }); toast(decision === "uphold" ? "Finding dropped. The manager has been informed." : "Finding kept. The manager has been informed."); }
+  catch (e) { toast(esc(e.message)); }
+  route();
+}
+
+function portfolioTable(rows, compact) {
+  return `<div style="overflow-x:auto"><table class="t"><thead><tr><th>Portfolio</th><th class="hide-sm">Portfolio manager</th><th>Latest update</th><th>Compliance status</th>${compact ? "" : `<th class="hide-sm">Open issues</th>`}</tr></thead><tbody>
+    ${rows.map(p => `<tr class="click" data-pid="${p.id}"><td><b style="font-weight:600">${esc(p.name)}</b></td><td class="hide-sm muted">${esc(p.pm_name || "Not assigned")}</td>
+      <td>${p.latest ? `${ragPill(p.latest.rag_status)} <span class="muted small" style="margin-left:6px">${esc(PLAIN.month(p.latest.reporting_month))}</span>` : `<span class="muted">No updates</span>`}</td>
+      <td>${statusPill(p.status)}</td>
+      ${compact ? "" : `<td class="hide-sm muted small">${p.issues.length ? esc(p.issues.map(i => PLAIN.rule(i.rule_id)).join("; ")) : "None"}</td>`}</tr>`).join("")}</tbody></table></div>`;
+}
+function bindPortfolioRows() { $$("tr[data-pid]").forEach(tr => tr.onclick = () => openPortfolio(tr.dataset.pid)); }
+async function loadPortfolios() {
+  setPorts(await api("/api/overview"));
+  const order = { needs_you: 0, overdue: 1, reminded: 2, exception: 3, on_track: 4 };
+  $("#portTable").innerHTML = portfolioTable([...OV.portfolios].sort((a, b) => order[a.status] - order[b.status]), false);
+  bindPortfolioRows();
+}
+async function openPortfolio(pid) {
+  const d = await api(`/api/portfolios/${pid}/detail`), p = d.portfolio, st = PORTS[pid] || {};
+  $("#dTitle").textContent = p.name;
+  const open = d.findings.filter(f => f.status === "open" && f.last_decision !== "log");
+  $("#dBody").innerHTML = `
+    <div class="row" style="margin-top:16px">${st.status ? statusPill(st.status) : ""}</div>
+    <div class="row" style="margin-top:16px;align-items:flex-end"><div class="field" style="margin:0;flex:1;min-width:220px"><label class="flabel" for="pmSel">Portfolio manager</label>
+      <select id="pmSel"><option value="">Not assigned</option>${d.pms.map(u => `<option value="${u.id}" ${u.id === p.pm_user_id ? "selected" : ""}>${esc(u.name)}</option>`).join("")}</select></div>
+      <button class="btn" id="checkOne">Check this portfolio now</button></div>
+    <h4>Open issues</h4>
+    ${open.length ? open.map(f => `<div class="issue"><b>${esc(PLAIN.rule(f.rule_id))}</b><div class="k">${esc(PLAIN.month(f.reporting_month))} · ${esc(PLAIN.decision(f.last_decision))}</div><p>${esc(f.finding.rationale)}</p>${f.finding.llm_note ? `<p class="muted small">AI assessment: ${esc(f.finding.llm_note)}</p>` : ""}</div>`).join("") : `<p class="muted">No open issues.</p>`}
+    <h4>Monthly updates</h4>
+    <div class="card"><table class="t"><thead><tr><th>Month</th><th>RAG status</th><th class="r">Cash position</th></tr></thead><tbody>${d.submissions.map(s => `<tr><td>${esc(PLAIN.month(s.reporting_month))}<div class="muted small" style="margin-top:2px">${esc(s.execution_blocker)}</div></td><td>${ragPill(s.rag_status)}</td><td class="r" style="${s.cash_position_ngn < 0 ? "color:var(--negative)" : ""}">${esc(PLAIN.naira(s.cash_position_ngn))}</td></tr>`).join("") || `<tr><td colspan="3" class="muted">No updates yet.</td></tr>`}</tbody></table></div>
+    <h4>Emails about this portfolio</h4>
+    ${d.emails.length ? d.emails.map(e => `<details style="margin-bottom:8px"><summary>${esc(PLAIN.emailKind(e.kind))} for ${esc(person(e.to_email))} <span class="muted small">· ${esc(PLAIN.when(e.ts))} · ${esc(PLAIN.delivery(e.status))}</span></summary><pre>${esc(e.body)}</pre></details>`).join("") : `<p class="muted">None yet.</p>`}
+    ${d.disputes.length ? `<h4>Disputes</h4>` + d.disputes.map(x => `<p class="small"><span class="badge">${esc(x.status)}</span> ${esc(PLAIN.rule(x.rule_id))}: “${esc(x.message)}”</p>`).join("") : ""}`;
+  $("#pmSel").onchange = async e => { try { await post(`/api/portfolios/${pid}`, { pm_user_id: e.target.value || null }); toast("Portfolio manager updated."); } catch (er) { toast(esc(er.message)); } };
+  $("#checkOne").onclick = async () => { const r = await post("/api/webhook/test", { portfolio_id: pid }); startedToast(r.run_id); };
+  $("#drawer").classList.add("open"); $("#scrim").classList.add("open");
+}
+function closeDrawer() { $("#drawer").classList.remove("open"); $("#scrim").classList.remove("open"); }
+$("#dClose").onclick = closeDrawer; $("#scrim").onclick = closeDrawer;
+addEventListener("keydown", e => { if (e.key === "Escape") closeDrawer(); });
+
+const ACT_FILTERS = { all: "All activity", email: "Emails", decisions: "Decisions", checks: "Checks", admin: "Settings & team" };
+let actFilter = "all";
+function isUseful(r) {
+  const ty = (r.data || {}).override?.type || "";
+  if (r.event === "override.created" && /^(ACTION_|DISPUTE_)/.test(ty)) return false;
+  return r.event !== "settings.connection_tested";
+}
+function who(r) { return r.actor === "agent" ? "The assistant" : r.actor === "system" ? "The system" : (r.actor || "").startsWith("cli:") ? "An administrator" : r.actor === (ME || {}).email ? "You" : r.actor; }
+function person(email) { if (!email) return ""; if (ME && email === ME.email) return "you"; const p = Object.values(PORTS).find(p => p.pm_email === email); return p ? p.pm_name : email; }
+function pname(d) { return d.portfolio_name || (PORTS[d.portfolio_id] || {}).name || d.portfolio_id || ""; }
+function sentence(r) {
+  const d = r.data || {}, e = r.event;
+  if (e.startsWith("email.")) {
+    const kind = PLAIN.emailKind(d.kind), about = d.portfolio_id ? ` about ${pname(d)}` : "";
+    if (r.outcome === "failure") return ["alert", "red", `${kind} to ${person(d.to)} could not be sent${about}. It will be retried.`];
+    const to = person(d.intended_to || d.to), forWho = to === "you" ? " to you" : ` to ${to}`;
+    return ["mail", "", `${kind}${forWho}${about}${d.delivery === "simulated" ? " (practice mode, not delivered)" : d.delivery === "redirect" ? " (delivered to the test inbox)" : ""}`];
+  }
+  if (e === "review.queued") return ["hand", "navy", `Referred to you: ${PLAIN.rule(d.rule_id).toLowerCase()} for ${pname(d)}`];
+  if (e === "review.approved") return ["check", "green", `${who(r)} approved: ${PLAIN.action(d.action_type).toLowerCase()} for ${pname(d)}`];
+  if (e === "review.rejected") return ["x", "", `${who(r)} declined: ${PLAIN.action(d.action_type).toLowerCase()} for ${pname(d)}${d.dismissed ? ", marked as incorrect" : ""}`];
+  if (e === "dispute.opened") return ["scale", "navy", `${who(r)} disputed a finding: “${(d.message || "").slice(0, 90)}”`];
+  if (e === "dispute.decided") return ["scale", "", `${who(r)} ${d.decision === "UPHELD" ? "accepted" : "did not accept"} a dispute from ${person(d.raised_by)}`];
+  if (e === "override.created") {
+    const o = d.override || {}, t = o.type;
+    if (t === "SUPPRESS") return ["shield", "", `${who(r)} added an exception: ${PLAIN.rule(o.rule_id)} for ${(PORTS[o.portfolio_id] || {}).name || (o.portfolio_id === "*" ? "all portfolios" : o.portfolio_id)}${o.reason ? ` (${o.reason})` : ""}`];
+    if (t === "DISMISS") return ["shield", "", `${who(r)} marked a finding as incorrect${o.reason ? `: ${o.reason}` : ""}`];
+    if (t === "PAUSE") return ["pause", "red", `${who(r)} paused the assistant`];
+    if (t === "RESUME") return ["play", "green", `${who(r)} resumed the assistant`];
+    return ["shield", "", r.summary];
+  }
+  if (e === "run.completed") { const s = d.result || {}; return ["search", "", `Check completed: ${s.findings ?? "?"} issues found, ${s.emails ?? 0} emails, ${s.queued ?? 0} referred to you`]; }
+  if (e === "run.aborted") return ["alert", "red", "A check stopped safely because the data could not be read. Nothing was sent."];
+  if (e === "user.created") return ["user", "", `${who(r)} added ${d.email} as ${d.role === "COS" ? "Chief of Staff" : "portfolio manager"}`];
+  if (e === "user.status_changed") return ["user", "", `${who(r)} ${d.after === "DEACTIVATED" ? "removed access for" : "restored access for"} ${d.email}`];
+  if (e === "portfolio.pm_assigned") return ["folder", "", `${who(r)} changed the manager of ${(PORTS[r.target_id] || {}).name || r.target_id} to ${person(d.after) || "nobody"}`];
+  if (e === "settings.changed") return ["gear", "", `${who(r)} changed settings: ${Object.keys(d.changes || {}).map(k => SETTING_NAMES[k] || k).join(", ")}`];
+  if (e === "settings.secret_replaced") return ["key", "", `${who(r)} updated the ${r.target_id === "openrouter" ? "AI" : "email"} connection`];
+  if (e === "system.reset") return ["alert", "", `${who(r)} cleared the assistant's activity`];
+  return ["list", "", r.summary || e];
+}
+const SETTING_NAMES = { mode: "operating mode", paused: "pause", daily_check_time: "daily check time", llm_kind: "reviewer", openrouter_model: "AI model",
+  conf_auto_remind: "AI confidence", conf_min_act: "AI confidence", agent_email_delivery: "email delivery", agent_email_redirect_to: "test inbox",
+  email_from: "sender address", deadline_day: "deadline", reminder_window_days: "reminder timing", persistent_red_months: "Red alert", cash_drop_threshold: "cash check", demo_as_of: "demonstration date" };
+function renderActivity(rows) {
+  return rows.map(r => { const [i, tone, t] = sentence(r); return `<div class="act"><div class="i ${tone}">${ICON[i] || ICON.list}</div><div class="s">${esc(t)}<div class="w">${esc(PLAIN.when(r.ts))}</div></div></div>`; }).join("");
+}
+async function loadActivity() {
+  if (!OV) setPorts(await api("/api/overview"));
+  $("#actFilters").innerHTML = Object.entries(ACT_FILTERS).map(([k, v]) => `<button class="fchip ${k === actFilter ? "on" : ""}" data-f="${k}">${v}</button>`).join("");
+  $$(".fchip").forEach(c => c.onclick = () => { actFilter = c.dataset.f; loadActivity(); });
+  const rows = (await api("/api/activity?limit=250")).filter(isUseful).filter(r =>
+    actFilter === "all" || (actFilter === "email" && r.category === "email") || (actFilter === "decisions" && ["review", "dispute", "override"].includes(r.category)) ||
+    (actFilter === "checks" && r.category === "run") || (actFilter === "admin" && ["settings", "user", "portfolio", "system"].includes(r.category)));
+  $("#actList").innerHTML = renderActivity(rows) || EMPTY("Nothing here yet");
+}
+
+function startedToast(runId) {
+  toast(`Check started. <a href="#how" onclick="watch('${runId}')">Watch it live</a>`, 6000);
+  let n = 0; const t = setInterval(async () => { n++; if (n > 40) return clearInterval(t);
+    const ov = await api("/api/overview"); if (ov.last_check && ov.last_check.run_id === runId) { clearInterval(t); setPorts(ov); route();
+      const s = ov.last_check.summary || {}; toast(`Check completed: ${s.findings ?? 0} issues, ${s.emails ?? 0} emails, ${s.queued ?? 0} referred to you.`, 6000); } }, 3000);
+}
+function watch(runId) { setTimeout(() => { $("#howFrame").src = `/workflow?embed=1&log=1#run=${runId}`; }, 50); }
+$("#checkNow").onclick = async () => {
+  $("#checkNow").disabled = true;
+  try { const r = await post("/api/runs", {}); startedToast(r.run_id); if (location.hash === "#how") watch(r.run_id); }
+  catch (e) { toast(esc(e.message)); } finally { setTimeout(() => $("#checkNow").disabled = false, 2500); }
+};
+
+async function loadSettings(sub) {
+  SETTINGS = await api("/api/settings");
+  const s = SETTINGS, sect = sub || $(".setnav a.on")?.dataset.s || "assistant";
+  $$(".setnav a").forEach(a => { a.classList.toggle("on", a.dataset.s === sect); a.onclick = () => location.hash = "settings/" + a.dataset.s; });
+  $$(".sect").forEach(x => x.classList.toggle("on", x.id === "s-" + sect));
+  $("#modeRadios").innerHTML = Object.entries(PLAIN.mode).map(([k, [t, d]]) => `<label class="radio"><input type="radio" name="mode" value="${k}" ${s.assistant.mode === k ? "checked" : ""}><div><b>${t}${k === "auto" ? " (recommended)" : ""}</b><span>${d}</span></div></label>`).join("");
+  $("#dailyOn").checked = !!s.assistant.daily_check_time; $("#dailyTime").value = s.assistant.daily_check_time || "08:00";
+  $("#pausedSw").checked = s.assistant.paused; paintPaused();
+  for (const k of ["deadline_day", "reminder_window_days", "persistent_red_months"]) $("#r_" + k).value = s.rules[k];
+  $("#r_cash_pct").value = Math.round(s.rules.cash_drop_threshold * 100);
+  const or = s.connections.openrouter;
+  $("#orState").innerHTML = or.connected ? `<span class="pill green">Connected</span> <span class="muted small" style="margin-left:6px">OpenRouter · key ending ${esc(or.hint.replace("…", ""))}</span>` : `<span class="pill amber">Not connected</span> <span class="muted small" style="margin-left:6px">Add a key to use AI review.</span>`;
+  $$("input[name=llm]").forEach(r => r.checked = r.value === s.ai.llm_kind);
+  $("#model").innerHTML = s.ai.models.map(m => `<option value="${m.id}" ${m.id === s.ai.openrouter_model ? "selected" : ""}>${esc(m.label)}</option>`).join("") +
+    (s.ai.models.some(m => m.id === s.ai.openrouter_model) ? "" : `<option value="${esc(s.ai.openrouter_model)}" selected>${esc(s.ai.openrouter_model)}</option>`);
+  const note = () => $("#modelNote").textContent = (s.ai.models.find(m => m.id === $("#model").value) || {}).note || "";
+  $("#model").onchange = note; note();
+  $("#confAuto").value = Math.round(s.ai.conf_auto_remind * 100); $("#confMin").value = Math.round(s.ai.conf_min_act * 100);
+  const paintConf = () => { $("#autoV").textContent = $("#confAuto").value + "%"; $("#minV").textContent = $("#confMin").value + "%"; };
+  $("#confAuto").oninput = $("#confMin").oninput = paintConf; paintConf();
+  const rs = s.connections.resend;
+  $("#rsState").innerHTML = rs.connected ? `<span class="pill green">Connected</span> <span class="muted small" style="margin-left:6px">Resend · key ending ${esc(rs.hint.replace("…", ""))}</span>` : `<span class="pill amber">Not connected</span> <span class="muted small" style="margin-left:6px">Sign-in codes appear only on the server console until this is set.</span>`;
+  $("#emailFrom").value = s.email.email_from || "";
+  $$("input[name=deliv]").forEach(r => r.checked = r.value === s.email.agent_email_delivery);
+  $("#redirectTo").value = s.email.agent_email_redirect_to || "";
+  $("#asOf").value = s.advanced.demo_as_of || "";
+  $("#sysInfo").innerHTML = `Data is stored in <b>${esc(s.connections.database.label)}</b>.<br>Web address: ${esc(s.advanced.app_url)}`;
+  if (sect === "team") loadTeam(); if (sect === "exceptions") loadExceptions(); if (sect === "security") loadSecurity();
+}
+function paintPaused() { $("#pausedLbl").textContent = $("#pausedSw").checked ? "Paused: nothing is being sent" : "Running"; }
+async function save(section, values) {
+  try { const r = await post("/api/settings", { values }); msg("m-" + section, r.changed.length ? "Saved" : "No changes"); setPorts(await api("/api/overview")); }
+  catch (e) { msg("m-" + section, e.message, false); }
+}
+$$("[data-save]").forEach(b => b.onclick = () => {
+  const sec = b.dataset.save, v = {};
+  if (sec === "assistant") { v.mode = ($("input[name=mode]:checked") || {}).value; v.daily_check_time = $("#dailyOn").checked ? $("#dailyTime").value : ""; v.paused = $("#pausedSw").checked; }
+  if (sec === "rules") { for (const k of ["deadline_day", "reminder_window_days", "persistent_red_months"]) v[k] = +$("#r_" + k).value; v.cash_drop_threshold = +$("#r_cash_pct").value / 100; }
+  if (sec === "ai") { v.llm_kind = ($("input[name=llm]:checked") || {}).value; v.openrouter_model = $("#model").value; v.conf_auto_remind = +$("#confAuto").value / 100; v.conf_min_act = +$("#confMin").value / 100; }
+  if (sec === "email") { v.email_from = $("#emailFrom").value.trim(); v.agent_email_delivery = ($("input[name=deliv]:checked") || {}).value; v.agent_email_redirect_to = $("#redirectTo").value.trim(); }
+  if (sec === "advanced") { v.demo_as_of = $("#asOf").value; }
+  save(sec, v).then(() => loadSettings(sec));
+});
+$("#pausedSw").onchange = paintPaused;
+$("#clearAsOf").onclick = () => { $("#asOf").value = ""; };
+async function setPaused(p) { await post("/api/settings", { values: { paused: p } }); toast(p ? "Assistant paused." : "Assistant resumed."); route(); }
+$$("[data-replace]").forEach(b => b.onclick = () => { const id = b.dataset.replace === "openrouter" ? "#orReplace" : "#rsReplace"; $(id).style.display = $(id).style.display === "none" ? "flex" : "none"; });
+$$("[data-savekey]").forEach(b => b.onclick = async () => {
+  const name = b.dataset.savekey, input = name === "openrouter" ? $("#orKey") : $("#rsKey");
+  b.disabled = true; msg("m-" + name, "Checking the key…");
+  try { const r = await post("/api/settings/secret", { name, value: input.value }); input.value = ""; msg("m-" + name, r.detail); loadSettings(name === "openrouter" ? "ai" : "email"); }
+  catch (e) { msg("m-" + name, e.message, false); } finally { b.disabled = false; }
+});
+$$("[data-test]").forEach(b => b.onclick = async () => {
+  const what = b.dataset.test; b.disabled = true; msg("m-" + what, "Testing…");
+  try { const r = await post("/api/settings/test", { what }); msg("m-" + what, r.detail); } catch (e) { msg("m-" + what, e.message, false); } finally { b.disabled = false; }
+});
+async function loadTeam() {
+  const d = await api("/api/users"), pms = d.users.filter(u => u.role === "PM" && u.status === "ACTIVE");
+  $("#ownership").innerHTML = `<table class="t"><thead><tr><th>Portfolio</th><th style="width:280px">Portfolio manager</th></tr></thead><tbody>${d.portfolios.map(p => `<tr><td>${esc(p.name)}</td><td><select data-own="${p.id}"><option value="">Not assigned</option>${pms.map(u => `<option value="${u.id}" ${u.id === p.pm_user_id ? "selected" : ""}>${esc(u.name)}</option>`).join("")}</select></td></tr>`).join("")}</tbody></table>`;
+  $$("[data-own]").forEach(sel => sel.onchange = async () => { try { await post(`/api/portfolios/${sel.dataset.own}`, { pm_user_id: sel.value || null }); toast("Portfolio manager updated."); } catch (e) { toast(esc(e.message)); } });
+  $("#people").innerHTML = d.users.map(u => `<div class="user" style="${u.status === "ACTIVE" ? "" : "opacity:.55"}"><div class="who"><div><b style="font-weight:600">${esc(u.name)}</b> <span class="badge ${u.role === "COS" ? "info" : ""}">${u.role === "COS" ? "Chief of Staff" : "Portfolio manager"}</span>${u.status === "ACTIVE" ? "" : ` <span class="badge danger">No access</span>`}</div>
+    <div class="k">${esc(u.email)} · ${u.last_login_at ? "last signed in " + esc(PLAIN.when(u.last_login_at)) : "never signed in"}</div></div>
+    ${u.email === ME.email ? `<span class="muted small">You</span>` : u.status === "ACTIVE" ? `<button class="btn sm danger" data-st="${u.id}" data-v="DEACTIVATED">Remove access</button>` : `<button class="btn sm" data-st="${u.id}" data-v="ACTIVE">Restore access</button>`}</div>`).join("");
+  $$("[data-st]").forEach(b => b.onclick = async () => { if (b.dataset.v === "DEACTIVATED" && !confirm("Remove this person's access? They will be signed out immediately.")) return;
+    try { await post(`/api/users/${b.dataset.st}`, { status: b.dataset.v }); loadTeam(); } catch (e) { toast(esc(e.message)); } });
+}
+$("#addUser").onclick = async () => {
+  try { await post("/api/users", { name: $("#uName").value, email: $("#uEmail").value, role: $("#uRole").value }); $("#uName").value = $("#uEmail").value = ""; msg("m-team", "Added. They can now sign in with their email address."); loadTeam(); }
+  catch (e) { msg("m-team", e.message, false); }
+};
+const RULES = ["MISSING_SUBMISSION", "DUE_SOON", "LATE_SUBMISSION", "WEAK_BLOCKER", "STALE_BLOCKER", "PERSISTENT_RED", "CASH_RAG_INCONSISTENT", "NARRATIVE_RAG_MISMATCH", "BLOCKER_QUALITY"];
+async function loadExceptions() {
+  if (!OV) setPorts(await api("/api/overview"));
+  $("#exP").innerHTML = `<option value="*">All portfolios</option>` + OV.portfolios.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join("");
+  $("#exR").innerHTML = `<option value="*">Any issue</option>` + RULES.map(r => `<option value="${r}">${esc(PLAIN.rule(r))}</option>`).join("");
+  const now = new Date(); let opts = `<option value="*">Any month</option>`;
+  for (let i = 1; i <= 6; i++) { const d = new Date(now.getFullYear(), now.getMonth() - i, 1); const v = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; opts += `<option value="${v}">${PLAIN.month(v)}</option>`; }
+  $("#exM").innerHTML = opts;
+  if (!$("#exU").value) $("#exU").value = new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10);
+  const ovr = await api("/api/overrides"), today = new Date().toISOString().slice(0, 10);
+  const live = ovr.filter(o => (o.type === "SUPPRESS" && (!o.until || o.until >= today)) || o.type === "DISMISS");
+  const pn = id => id === "*" ? "all portfolios" : (OV.portfolios.find(p => p.id === id) || {}).name || id;
+  $("#exList").innerHTML = live.length ? live.map(o => `<div class="act"><div class="i">${ICON.shield}</div><div class="s">${o.type === "SUPPRESS"
+      ? `Ignore <b>${esc(o.rule_id === "*" ? "any issue" : PLAIN.rule(o.rule_id))}</b> for <b>${esc(pn(o.portfolio_id))}</b>${o.reporting_month && o.reporting_month !== "*" ? ` (${esc(PLAIN.month(o.reporting_month))})` : ""}${o.until ? ` until ${esc(o.until)}` : ""}`
+      : `Finding marked as incorrect${o.rule_id ? `: <b>${esc(PLAIN.rule(o.rule_id))}</b>` : ""}${o.portfolio_id ? ` for ${esc(pn(o.portfolio_id))}` : ""}`}
+      <div class="w">${esc(o.reason || "")} · ${esc(o.by || "")} · ${esc(PLAIN.when(o.created_at))}</div></div></div>`).join("") : EMPTY("No exceptions");
+}
+$("#addEx").onclick = async () => {
+  const reason = $("#exW").value.trim(); if (!reason) return msg("m-ex", "Please give a reason. It is kept in the audit history.", false);
+  try { await post("/api/overrides", { type: "SUPPRESS", portfolio_id: $("#exP").value, rule_id: $("#exR").value, reporting_month: $("#exM").value, until: $("#exU").value, reason });
+    $("#exW").value = ""; msg("m-ex", "Exception added. It applies from the next check."); loadExceptions(); } catch (e) { msg("m-ex", e.message, false); }
+};
+async function loadSecurity() {
+  const d = await api("/api/users");
+  const label = { signed_in: "Signed in", code_requested: "Requested a sign-in code", verify_failed: "Incorrect or expired code", rate_limited: "Too many attempts (blocked)", code_requested_unknown: "Sign-in attempt for an unknown email", signed_out: "Signed out" };
+  $("#signins").innerHTML = d.auth_events.slice(0, 15).map(e => { const bad = /failed|limited|unknown/.test(e.event);
+    return `<div class="act"><div class="i ${bad ? "amber" : e.event === "signed_in" ? "green" : ""}">${bad ? ICON.alert : ICON.lock}</div><div class="s">${esc(label[e.event] || e.event)}${e.email ? ` · ${esc(e.email)}` : ""}<div class="w">${esc(PLAIN.when(e.ts))} · IP address <span class="mono">${esc(e.ip || "unknown")}</span></div></div></div>`; }).join("") || EMPTY("No sign-in activity yet");
+}
+$("#verifyBtn").onclick = async () => {
+  $("#verifyMsg").textContent = "Verifying…"; $("#verifyMsg").className = "muted";
+  try { const r = await api("/api/audit/verify"); $("#verifyMsg").className = r.ok ? "saved" : "error";
+    $("#verifyMsg").textContent = r.ok ? `Intact: all ${r.checked} records verified` : `Problem found at record ${r.broken_at}: ${r.reason}`; }
+  catch (e) { $("#verifyMsg").textContent = e.message; }
+};
+$("#resetBtn").onclick = async () => { if (!confirm("Clear the assistant's findings, emails, decisions and exceptions? This cannot be undone. The audit history is kept.")) return;
+  await post("/api/reset"); toast("Cleared. Select Run check now to start again."); OV = null; route(); };
+
+$("#logout").onclick = async () => { await post("/api/auth/logout"); location.href = "/login"; };
+(async () => {
+  ME = await api("/api/me"); $("#meName").textContent = ME.name;
+  if (location.hash.match(/dispute=/)) location.hash = "decisions";
+  route();
+  setInterval(async () => { try { setPorts(await api("/api/overview")); } catch (_) {} }, 15000);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+[
+  { "id": "P01", "name": "Lagos Real Estate Fund I",   "pm_name": "Adaeze Okafor",   "pm_email": "adaeze.okafor@bnh.example",   "active": true },
+  { "id": "P02", "name": "Agri-Value Chain Fund",      "pm_name": "Tunde Bakare",    "pm_email": "tunde.bakare@bnh.example",    "active": true },
+  { "id": "P03", "name": "Fintech Ventures II",        "pm_name": "Ngozi Eze",       "pm_email": "ngozi.eze@bnh.example",       "active": true },
+  { "id": "P04", "name": "Infrastructure Debt Fund",   "pm_name": "Ibrahim Musa",    "pm_email": "ibrahim.musa@bnh.example",    "active": true },
+  { "id": "P05", "name": "Healthcare Growth Fund",     "pm_name": "Funmi Adeyemi",   "pm_email": "funmi.adeyemi@bnh.example",   "active": true },
+  { "id": "P06", "name": "Renewable Energy Platform",  "pm_name": "Chinedu Obi",     "pm_email": "chinedu.obi@bnh.example",     "active": true },
+  { "id": "P07", "name": "Consumer Retail Holdings",   "pm_name": "Amina Yusuf",     "pm_email": "amina.yusuf@bnh.example",     "active": true },
+  { "id": "P08", "name": "Logistics & Ports Fund",     "pm_name": "Segun Afolabi",   "pm_email": "segun.afolabi@bnh.example",   "active": true }
+]

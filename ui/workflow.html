@@ -1,0 +1,668 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Workflow · BNH Compliance</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    /* System 3 institutional palette */
+    --bg: #f5f6f8; --grid: #d9dee6; --panel: #ffffff; --panel-2: #f9fafb; --line: #e2e5ea;
+    --text: #14213a; --muted: #556075; --accent: #1e4a8a; --ok: #2a8659; --warn: #c28a1a;
+    --err: #b83a3a; --info: #1e4a8a; --edge: #b8c0cc; --human: #b08d57;
+    --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
+    font: 13px/1.45 "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  button, select, input, textarea { font: inherit; color: inherit; }
+  .app { position: relative; display: grid; grid-template-columns: 236px minmax(0, 1fr); grid-template-rows: 48px minmax(0, 1fr) 140px; height: 100vh; overflow: hidden; }
+
+  /* ── form controls ── */
+  select, input[type=date], input[type=text], textarea {
+    background-color: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 6px 9px; min-width: 0; }
+  select { appearance: none; -webkit-appearance: none; padding-right: 32px; cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%239a9aaa' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; background-size: 10px 6px; }
+  select:focus, input:focus, textarea:focus { outline: 2px solid rgba(30,74,138,.35); outline-offset: 0; border-color: var(--accent); }
+  .btn { white-space: nowrap; background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px; cursor: pointer; text-decoration: none; color: var(--text); }
+  .btn:hover { border-color: #c9cfd8; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  .btn.primary:disabled { opacity: .5; cursor: wait; }
+  .btn.ok { border-color: var(--ok); color: var(--ok); } .btn.err { border-color: var(--err); color: var(--err); }
+  .btn.sm { padding: 3px 9px; font-size: 12px; }
+  .btn.block { width: 100%; text-align: center; }
+  .pill { font-size: 11px; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis; max-width: 100%; display: inline-block; vertical-align: middle; }
+  .pill.ok { color: var(--ok); border-color: #bfdccb; } .pill.warn { color: var(--warn); border-color: #eed6a3; }
+  .pill.err { color: var(--err); border-color: #ebc0c0; }
+
+  /* ── sidebar ── */
+  .side { grid-row: 1 / -1; grid-column: 1; background: var(--panel); border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; overflow-y: auto; }
+  .brand { font-weight: 650; padding: 15px 16px 13px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  .brand span { color: var(--accent); }
+  .sec { padding: 12px 14px; border-bottom: 1px solid var(--line); }
+  .sec h4 { margin: 0 0 8px; font-size: 10.5px; text-transform: uppercase; letter-spacing: .9px; color: var(--muted); font-weight: 600; }
+  .fld { display: block; margin-bottom: 8px; }
+  .fld > span { display: block; font-size: 11px; color: var(--muted); margin-bottom: 3px; }
+  .fld select, .fld input { width: 100%; }
+  .inline { display: flex; gap: 6px; } .inline select { flex: 1; }
+  .nav { padding: 8px 8px; border-bottom: 1px solid var(--line); }
+  .nav .tab, .nav a { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 6px; cursor: pointer; color: var(--muted); text-decoration: none; }
+  .nav .tab:hover, .nav a:hover { background: #f1f3f6; color: var(--text); }
+  .nav .tab.on { background: #e8eef7; color: var(--text); box-shadow: inset 2px 0 0 var(--accent); }
+  .nav .ico { width: 18px; text-align: center; flex: none; }
+  .nav .n { margin-left: auto; background: var(--accent); color: #fff; border-radius: 9px; padding: 0 7px; font-size: 10.5px; font-weight: 600; }
+  .stat { display: grid; grid-template-columns: 74px minmax(0, 1fr); gap: 6px; align-items: center; margin-bottom: 6px; font-size: 12px; }
+  .stat > span:first-child { color: var(--muted); }
+  .me { margin-top: auto; padding: 12px 14px; border-top: 1px solid var(--line); }
+  .me .nm { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .me .em { color: var(--muted); font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 8px; }
+
+  /* ── top bar (canvas only) ── */
+  .top { grid-column: 2; grid-row: 1; display: flex; align-items: center; gap: 10px; padding: 0 14px; background: var(--panel); border-bottom: 1px solid var(--line); min-width: 0; }
+  .top label { color: var(--muted); font-size: 12px; }
+  #runSel { width: 230px; font-family: var(--mono); font-size: 11.5px; }
+  #runhead { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--muted); font-size: 12px; }
+  #runhead b { font-family: var(--mono); font-size: 12px; color: var(--text); font-weight: 600; }
+  #runhead div { display: inline; margin-left: 8px; }
+  #runhead a { color: var(--accent); margin-left: 8px; }
+
+  /* ── canvas ── */
+  main { grid-column: 2; grid-row: 2; position: relative; overflow: hidden; cursor: grab; min-width: 0;
+    background-color: var(--bg); background-image: radial-gradient(var(--grid) 1.2px, transparent 1.2px); background-size: 22px 22px; }
+  main.drag { cursor: grabbing; }
+  #world { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+  svg#edges { position: absolute; left: -200px; top: -200px; overflow: visible; pointer-events: none; }
+  .edge { fill: none; stroke: var(--edge); stroke-width: 2; transition: stroke .3s; }
+  .edge.dash { stroke-dasharray: 5 5; }
+  .edge.done { stroke: #8a93a3; }
+  .edge.active { stroke: var(--accent); stroke-width: 2.6; stroke-dasharray: 8 7; animation: flow .5s linear infinite; }
+  .edge.human { stroke: var(--human); }
+  @keyframes flow { to { stroke-dashoffset: -15; } }
+  .elabel { font: 600 11px var(--mono); fill: var(--text); }
+  .elabel-bg { fill: var(--panel-2); stroke: var(--line); }
+  .ename { font: 11px var(--mono); fill: var(--muted); }
+  .ename-bg { fill: var(--bg); }
+
+  .node { position: absolute; width: 200px; height: 84px; background: var(--panel-2); border: 1.5px solid var(--line);
+    border-radius: 10px; display: flex; gap: 9px; align-items: center; padding: 0 11px; cursor: pointer; overflow: visible;
+    box-shadow: 0 2px 10px rgba(16,24,40,.08); transition: border-color .25s, box-shadow .25s; user-select: none; }
+  .node:hover { border-color: #8a93a3; }
+  .node .ic { width: 32px; height: 32px; border-radius: 6px; display: grid; place-items: center; font-size: 16px; flex: none; background: #e8eef7; color: #1e4a8a; }
+  .node .tx { flex: 1; min-width: 0; overflow: hidden; }
+  .node .t, .node .s, .node .meta { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .node .t { font-weight: 600; font-size: 14px; }
+  .node .s { color: var(--muted); font-size: 11.5px; }
+  .node .meta { font-size: 11.5px; color: #556075; margin-top: 3px; padding-top: 3px; border-top: 1px solid #e2e5ea; min-height: 18px; }
+  .node .meta:empty::before { content: "idle"; color: #8a93a3; }
+  .node .badge { position: absolute; top: -9px; right: -9px; min-width: 20px; height: 20px; border-radius: 10px; padding: 0 6px;
+    font: 600 11px/20px var(--mono); text-align: center; background: var(--line); color: var(--text); display: none; }
+  .node.sel { box-shadow: 0 0 0 3px rgba(30,74,138,.22), 0 2px 10px rgba(16,24,40,.08); }
+  .node.running { border-color: var(--warn); animation: pulse 1s ease-in-out infinite; }
+  .node.success { border-color: var(--ok); } .node.success .badge { display: block; background: var(--ok); color: #fff; }
+  .node.error { border-color: var(--err); } .node.error .badge { display: block; background: var(--err); color: #fff; }
+  .node.error .meta { color: #8e2424; }
+  .node.warn { border-color: var(--warn); } .node.warn .badge { display: block; background: var(--warn); color: #fff; }
+  .node.idle-dim { opacity: .55; }
+  @keyframes pulse { 50% { box-shadow: 0 0 0 6px rgba(194,138,26,.18), 0 2px 10px rgba(16,24,40,.08); } }
+  .node.trigger { border-radius: 30px 10px 10px 30px; }
+  .node.human-n .ic { background: #f4ecdf; }
+  .legend { position: absolute; left: 14px; bottom: 12px; display: flex; gap: 12px; color: var(--muted); font-size: 11px; background: rgba(255,255,255,.92); padding: 6px 10px; border-radius: 8px; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+  .zoom { position: absolute; right: 14px; bottom: 12px; display: flex; gap: 6px; }
+
+  /* ── right panel ── */
+  .panel { position: absolute; top: 48px; right: 0; bottom: 140px; width: 420px; max-width: calc(100% - 236px); z-index: 20;
+    background: var(--panel); border-left: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0;
+    box-shadow: -12px 0 30px rgba(16,24,40,.14); transform: translateX(105%); transition: transform .22s ease; }
+  .panel.open { transform: none; }
+  .pclose { margin-left: auto; background: none; border: 1px solid transparent; color: var(--muted); font-size: 18px; line-height: 1; width: 30px; height: 30px; border-radius: 6px; cursor: pointer; }
+  .pclose:hover { border-color: var(--line); color: var(--text); }
+  .phead { height: 48px; flex: none; display: flex; align-items: center; padding: 0 14px; border-bottom: 1px solid var(--line); font-weight: 600; gap: 8px; }
+  .phead .k { color: var(--muted); font-weight: 400; font-size: 12px; }
+  .panel h3 { margin: 0; padding: 12px 0 8px; font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); }
+  .pbody { overflow: auto; padding: 12px 14px; flex: 1; }
+  .card { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; overflow-wrap: anywhere; }
+  .card .h { display: flex; gap: 8px; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+  .card .k { color: var(--muted); font-size: 11.5px; }
+  .card p { margin: 6px 0; }
+  .note { border-left: 2px solid var(--info); padding-left: 8px; color: #1e4a8a; font-size: 12px; }
+  .why { border-left: 2px solid var(--warn); padding-left: 8px; color: #7a4e00; font-size: 12px; }
+  .row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
+  pre { font: 11px/1.45 var(--mono); white-space: pre-wrap; word-break: break-word; background: #f9fafb; border: 1px solid var(--line); border-radius: 6px; padding: 8px; margin: 6px 0; max-height: 340px; overflow: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 11.5px; table-layout: fixed; }
+  td, th { text-align: left; padding: 5px 4px; border-bottom: 1px solid #eef1f5; vertical-align: top; overflow-wrap: break-word; }
+  th { color: var(--muted); font-weight: 500; }
+  .card select { max-width: 100%; }
+  .d { font: 600 10px var(--mono); padding: 1px 6px; border-radius: 4px; white-space: nowrap; }
+  .d.execute { background: #e6f2ec; color: var(--ok); } .d.queue { background: #fbf0d9; color: var(--warn); }
+  .d.suppressed, .d.duplicate, .d.log { background: #eef1f5; color: var(--muted); } .d.shadow { background: #e8eef7; color: var(--info); }
+  .sev { font: 600 10px var(--mono); } .sev.HIGH, .sev.CRITICAL { color: var(--err); } .sev.MEDIUM { color: var(--warn); } .sev.LOW { color: var(--muted); }
+  .empty { color: var(--muted); padding: 20px 4px; text-align: center; }
+  label.f { display: block; font-size: 11px; color: var(--muted); margin: 8px 0 3px; }
+  label.f + * { width: 100%; }
+
+  footer { grid-column: 2; grid-row: 3; background: #f9fafb; border-top: 1px solid var(--line); overflow: auto; font: 11.5px/1.6 var(--mono); padding: 6px 14px; min-width: 0; }
+  footer .l { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  footer .l .ts { color: #8a93a3; } footer .l .nd { color: var(--info); } footer .l.err { color: var(--err); } footer .l.h { color: var(--human); }
+  body.embed .side { display: none; }
+  body.embed .app { grid-template-columns: minmax(0, 1fr); grid-template-rows: 48px minmax(0, 1fr) 0; }
+  body.embed .top, body.embed main, body.embed footer { grid-column: 1; }
+  body.embed.showlog .app { grid-template-rows: 48px minmax(0, 1fr) 150px; }
+  body.embed .panel { bottom: 0; max-width: 100%; }
+  body.embed.showlog .panel { bottom: 150px; }
+  body.embed .top label[for=runSel] { display: none; }
+  body.embed #runSel { width: 260px; }
+  .logtoggle { display: none; }
+  body.embed .logtoggle { display: inline-block; }
+  @media (max-width: 1250px) { .app { grid-template-columns: 210px minmax(0, 1fr); } #runSel { width: 170px; } .panel { width: 360px; } }
+</style>
+</head>
+<body>
+<script>{ const q = new URLSearchParams(location.search); if (q.get("embed")) document.body.classList.add("embed"); if (q.get("log")) document.body.classList.add("showlog"); }</script>
+<div class="app">
+  <aside class="side">
+    <div class="brand">BNH <span>·</span> Compliance Agent</div>
+
+    <div class="sec">
+      <h4>Run workflow</h4>
+      <label class="fld"><span>LLM</span><select id="llm"><option value="mock">Mock analyst</option><option value="openrouter">OpenRouter</option></select></label>
+      <label class="fld"><span>Mode</span><select id="mode"><option value="auto">Auto</option><option value="assist">Assist (approve all)</option><option value="shadow">Shadow (dry run)</option></select></label>
+      <label class="fld"><span>As of</span><input type="date" id="asof"></label>
+      <button class="btn primary block" id="runBtn">▶ Execute workflow</button>
+      <div class="fld" style="margin:10px 0 0"><span>Test webhook (one portfolio)</span>
+        <div class="inline"><select id="hookP"></select><button class="btn sm" id="hookBtn">Fire</button></div></div>
+    </div>
+
+    <nav class="nav">
+      <div class="tab" data-t="node"><span class="ico">◎</span>Node inspector</div>
+      <div class="tab" data-t="review"><span class="ico">⏸</span>Review queue<span class="n" id="revN" style="display:none"></span></div>
+      <div class="tab" data-t="outbox"><span class="ico">✉</span>Outbox</div>
+      <div class="tab" data-t="ovr"><span class="ico">🛡</span>Overrides</div>
+      <div class="tab" data-t="users"><span class="ico">👥</span>Users &amp; access</div>
+      <a href="/audit"><span class="ico">📜</span>Audit log<span style="margin-left:auto;color:var(--muted)">↗</span></a>
+    </nav>
+
+    <div class="sec">
+      <h4>System</h4>
+      <div class="stat"><span>Agent</span><span class="pill" id="pausePill">…</span></div>
+      <div class="stat"><span>LLM</span><span class="pill" id="keyPill">…</span></div>
+      <div class="stat"><span>Database</span><span class="pill" id="dbPill">…</span></div>
+      <div class="stat"><span>Emails</span><span class="pill" id="mailPill">…</span></div>
+      <div class="inline" style="margin-top:8px">
+        <button class="btn sm" id="pauseBtn" style="flex:1">Pause</button>
+        <button class="btn sm err" id="resetBtn" title="Clear runs, outbox, queue and overrides (audit log is kept)">Reset</button>
+      </div>
+    </div>
+
+    <div class="me">
+      <div class="nm" id="mePill">…</div>
+      <div class="em" id="meEmail"></div>
+      <button class="btn sm block" id="logoutBtn">Sign out</button>
+    </div>
+  </aside>
+
+  <div class="top">
+    <label for="runSel">Execution</label>
+    <select id="runSel"><option value="">—</option></select>
+    <div id="runhead">No check has run yet.</div>
+    <button class="btn sm logtoggle" id="logToggle" title="Show the step-by-step technical log">Technical log</button>
+  </div>
+
+  <main id="canvas">
+    <div id="world"><svg id="edges" width="2600" height="1100"></svg></div>
+    <div class="legend"><span><i style="background:var(--warn)"></i>running</span><span><i style="background:var(--ok)"></i>done</span><span><i style="background:var(--err)"></i>error</span><span><i style="background:var(--accent)"></i>data flowing</span><span><i style="background:var(--human)"></i>human</span></div>
+    <div class="zoom"><button class="btn sm" id="replayBtn">↻ Replay</button><button class="btn sm" id="fitBtn">Fit</button></div>
+  </main>
+
+  <section class="panel">
+    <div class="phead"><span id="phead">Node inspector</span><button class="pclose" id="pclose" title="Close (Esc)" aria-label="Close panel">×</button></div>
+    <div class="pbody" id="pbody"></div>
+  </section>
+
+  <footer id="log"></footer>
+</div>
+
+<script src="/plain.js"></script>
+<script>
+const W = 200, H = 84;
+const PANEL_TITLES = { node: "Node inspector", review: "Review queue", outbox: "Outbox", ovr: "Overrides", users: "Users & access" };
+const NODES = [
+  { id: "trigger",        x: 20, y: 240, ic: "<svg viewBox='0 0 24 24' width='17' height='17' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='9'/><path d='M12 7v5l3 2'/></svg>", t: "Start a check",           s: "Daily, on new update, or by you", cls: "trigger" },
+  { id: "load_data",      x: 250, y: 240, ic: "<svg viewBox='0 0 24 24' width='17' height='17' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><ellipse cx='12' cy='6' rx='7' ry='3'/><path d='M5 6v12c0 1.7 3.1 3 7 3s7-1.3 7-3V6M5 12c0 1.7 3.1 3 7 3s7-1.3 7-3'/></svg>", t: "Read monthly updates",  s: "Every portfolio's latest report" },
+  { id: "load_overrides", x: 480, y: 240, ic: "<svg viewBox='0 0 24 24' width='17' height='17' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><path d='M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6l-8-3Z'/></svg>", t: "Apply your exceptions",    s: "Extensions and past decisions" },
+  { id: "rules",          x: 710, y: 240, ic: "<svg viewBox='0 0 24 24' width='17' height='17' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><path d='M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01'/></svg>", t: "Check the rules",      s: "Deadlines, explanations, trends" },
+  { id: "llm_agent",      x: 940, y: 240, ic: "<svg viewBox='0 0 24 24' width='17' height='17' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><rect x='4' y='7' width='16' height='12' rx='3'/><path d='M12 3v4M9 13h.01M15 13h.01'/></svg>", t: "AI review",         s: "Reads updates like an analyst" },
+  { id: "tools",          x: 940, y: 430, ic: "<svg viewBox='0 0 24 24' width='17' height='17' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><circle cx='11' cy='11' r='7'/><path d='m20 20-3.5-3.5'/></svg>", t: "Look up history",       s: "Past months for that portfolio" },
+  { id: "validate",       x: 1170, y: 140, ic: "<svg viewBox='0 0 24 24' width='17' height='17' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><path d='m5 12 5 5L20 7'/></svg>", t: "Double-check facts", s: "AI claims must match records" },
+  { id: "fallback",       x: 1170, y: 340, ic: "<svg viewBox='0 0 24 24' width='17' height='17' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><path d='M12 9v4M12 17h.01'/><path d='M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z'/></svg>", t: "Backup: rules only", s: "If the AI is unavailable" },
+  { id: "policy",         x: 1400, y: 240, ic: "<svg viewBox='0 0 24 24' width='17' height='17' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><path d='M12 3v18M5 7h14M7 7l-3 7a3 3 0 0 0 6 0L7 7Zm10 0-3 7a3 3 0 0 0 6 0l-3-7Z'/></svg>", t: "Decide what to do",       s: "Act, ask you, or skip" },
+  { id: "send_email",     x: 1630, y: 60,  ic: "<svg viewBox='0 0 24 24' width='17' height='17' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='5' width='18' height='14' rx='2'/><path d='m3 7 9 6 9-6'/></svg>", t: "Send emails",        s: "Reminders and alerts" },
+  { id: "console",        x: 1630, y: 240, ic: "<svg viewBox='0 0 24 24' width='17' height='17' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><path d='M6 3h9l5 5v13H6z'/><path d='M14 3v6h6M9 13h8M9 17h6'/></svg>", t: "Write a summary",    s: "What happened this check" },
+  { id: "review_queue",   x: 1630, y: 420, ic: "<svg viewBox='0 0 24 24' width='17' height='17' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><path d='M9 5v14M15 5v14'/></svg>", t: "Ask you first",      s: "Anything uncertain or serious" },
+  { id: "audit",          x: 1860, y: 240, ic: "<svg viewBox='0 0 24 24' width='17' height='17' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><rect x='5' y='11' width='14' height='10' rx='2'/><path d='M8 11V7a4 4 0 0 1 8 0v4'/></svg>", t: "Record everything",         s: "Tamper-proof history" },
+  { id: "human",          x: 1860, y: 500, ic: "<svg viewBox='0 0 24 24' width='17' height='17' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='8' r='4'/><path d='M4 21c0-4 4-6 8-6s8 2 8 6'/></svg>", t: "Your decision",    s: "Approve, decline, or correct", cls: "human-n" },
+];
+const EDGES = [
+  ["trigger","load_data"],["load_data","load_overrides"],["load_overrides","rules"],["rules","llm_agent"],
+  ["llm_agent","tools","down"],["tools","llm_agent","up"],
+  ["llm_agent","validate"],["llm_agent","fallback"],["validate","policy"],["fallback","policy"],
+  ["policy","send_email"],["policy","console"],["policy","review_queue"],
+  ["send_email","audit"],["console","audit"],["review_queue","audit"],
+  ["review_queue","human"],["human","send_email","approve"],["human","load_overrides","back"],
+  ["load_data","audit","abort"],
+];
+const byId = Object.fromEntries(NODES.map(n => [n.id, n]));
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const rid = r => esc(r).replace(/_/g, "_<wbr>");  // rule ids wrap at underscores, never mid-word
+const api = async (p, opt) => { const r = await fetch(p, opt); if (r.status === 401) { top.location.href = "/login"; throw new Error("signed out"); } const j = await r.json(); if (!r.ok) throw new Error(j.error || r.status); return j; };
+const post = (p, b) => api(p, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b || {}) });
+
+/* ---------- canvas ---------- */
+const world = $("#world"), svg = $("#edges"), OX = 200, OY = 200;
+const nodeEls = {}, edgeEls = {};
+function port(n, side) {
+  if (side === "r") return [n.x + W, n.y + H / 2];
+  if (side === "l") return [n.x, n.y + H / 2];
+  if (side === "t") return [n.x + W / 2, n.y];
+  return [n.x + W / 2, n.y + H];
+}
+function pathFor(a, b, kind) {
+  const A = byId[a], B = byId[b];
+  let d;
+  if (kind === "down") { const sx = A.x + W * .35; d = `M${sx},${A.y + H} C${sx},${A.y + H + 50} ${sx},${B.y - 50} ${sx},${B.y}`; }
+  else if (kind === "up") { const sx = A.x + W * .65; d = `M${sx},${A.y} C${sx},${A.y - 50} ${sx},${B.y + H + 50} ${sx},${B.y + H}`; }
+  else if (kind === "back") { const [sx, sy] = port(A, "b"), [tx, ty] = port(B, "b"); d = `M${sx},${sy} C${sx},${sy + 150} ${tx},${ty + 330} ${tx},${ty}`; }
+  else if (kind === "abort") { const [sx, sy] = port(A, "t"), [tx, ty] = port(B, "t"); d = `M${sx},${sy} C${sx},${sy - 300} ${tx},${ty - 300} ${tx},${ty}`; }
+  else if (kind === "approve") { const [sx, sy] = port(A, "t"), tx = B.x + W, ty = B.y + H * .75; d = `M${sx},${sy} C${sx},${sy - 260} ${tx + 70},${ty} ${tx},${ty}`; }
+  else { const [sx, sy] = port(A, "r"), [tx, ty] = port(B, "l"), c = Math.max(50, (tx - sx) / 2); d = `M${sx},${sy} C${sx + c},${sy} ${tx - c},${ty} ${tx},${ty}`; }
+  return d;
+}
+function buildCanvas() {
+  const NS = "http://www.w3.org/2000/svg";
+  const defs = document.createElementNS(NS, "defs");
+  defs.innerHTML = `<marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8a93a3"/></marker>`;
+  svg.appendChild(defs);
+  const g = document.createElementNS(NS, "g"); g.setAttribute("transform", `translate(${OX},${OY})`); svg.appendChild(g);
+  for (const [a, b, kind] of EDGES) {
+    const p = document.createElementNS(NS, "path");
+    p.setAttribute("d", pathFor(a, b, kind)); p.setAttribute("class", "edge" + (["back", "abort", "approve"].includes(kind) ? " dash" : "") + (a === "human" || b === "human" ? " human" : ""));
+    p.setAttribute("marker-end", "url(#ar)"); g.appendChild(p);
+    const lg = document.createElementNS(NS, "g"); lg.style.display = "none";
+    lg.innerHTML = `<rect class="elabel-bg" rx="8" height="16" width="26"></rect><text class="elabel" text-anchor="middle" dy="11.5"></text>`;
+    g.appendChild(lg);
+    edgeEls[`${a}->${b}`] = { p, lg, n: 0 };
+    if (kind && kind !== "down" && kind !== "up") {
+      const t = document.createElementNS(NS, "text"); t.setAttribute("class", "ename"); t.setAttribute("text-anchor", "middle");
+      const L = p.getTotalLength(), pt = p.getPointAtLength(L * (kind === "approve" ? .35 : .5));
+      t.setAttribute("x", pt.x); t.setAttribute("y", pt.y + 4);
+      t.textContent = { back: "your decisions guide future checks", abort: "stops safely if data is missing", approve: "approved → sent" }[kind];
+      const bg = document.createElementNS(NS, "rect"); bg.setAttribute("class", "ename-bg"); bg.setAttribute("rx", 4);
+      g.appendChild(bg); g.appendChild(t);
+      const bb = t.getBBox(); bg.setAttribute("x", bb.x - 5); bg.setAttribute("y", bb.y - 2); bg.setAttribute("width", bb.width + 10); bg.setAttribute("height", bb.height + 4);
+    }
+  }
+  for (const n of NODES) {
+    const el = document.createElement("div");
+    el.className = "node " + (n.cls || ""); el.style.left = n.x + "px"; el.style.top = n.y + "px";
+    el.innerHTML = `<div class="ic">${n.ic}</div><div class="tx"><div class="t">${n.t}</div><div class="s">${n.s}</div><div class="meta"></div></div><div class="badge"></div>`;
+    el.title = `${n.t}: ${n.s}`;
+    el.onclick = ev => { ev.stopPropagation(); selectNode(n.id); };
+    world.appendChild(el); nodeEls[n.id] = el;
+  }
+}
+let view = { x: 0, y: 0, k: 0.6 };
+function applyView() { world.style.transform = `translate(${view.x}px,${view.y}px) scale(${view.k})`; }
+function fit() {
+  const c = $("#canvas").getBoundingClientRect(), bw = 2080, bh = 720;
+  view.k = Math.min(1.2, Math.min(c.width / bw, (c.height - 60) / bh) * 0.97);
+  view.x = (c.width - bw * view.k) / 2; view.y = (c.height - bh * view.k) / 2 + 20; applyView();
+}
+(function panZoom() {
+  const c = $("#canvas"); let drag = null;
+  c.addEventListener("mousedown", e => { if (e.target.closest(".node,.btn,.runhead")) return; drag = { x: e.clientX - view.x, y: e.clientY - view.y }; c.classList.add("drag"); });
+  addEventListener("mousemove", e => { if (drag) { view.x = e.clientX - drag.x; view.y = e.clientY - drag.y; applyView(); } });
+  addEventListener("mouseup", () => { drag = null; c.classList.remove("drag"); });
+  c.addEventListener("wheel", e => { e.preventDefault(); const r = c.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top;
+    const k2 = Math.min(1.6, Math.max(.25, view.k * (e.deltaY < 0 ? 1.1 : .9))); view.x = mx - (mx - view.x) * k2 / view.k; view.y = my - (my - view.y) * k2 / view.k; view.k = k2; applyView(); }, { passive: false });
+})();
+
+/* ---------- run state ---------- */
+let run = null; // {id, seq, events:[], byNode:{}, counts:{}}
+function resetCanvas() {
+  for (const id in nodeEls) { const el = nodeEls[id]; el.className = "node " + (byId[id].cls || ""); el.querySelector(".badge").textContent = ""; el.querySelector(".meta").textContent = ""; el.title = `${byId[id].t}: ${byId[id].s}`; }
+  for (const k in edgeEls) { const e = edgeEls[k]; e.n = 0; e.p.classList.remove("active", "done"); e.lg.style.display = "none"; }
+  $("#log").innerHTML = "";
+}
+function setNode(id, st, meta) {
+  const el = nodeEls[id]; if (!el) return;
+  const sel = el.classList.contains("sel");
+  el.className = "node " + (byId[id].cls || "") + " " + st + (sel ? " sel" : "");
+  const c = run.counts[id] || 0; el.querySelector(".badge").textContent = st === "error" ? "!" : c || "✓";
+  if (meta) { el.querySelector(".meta").textContent = meta; el.title = `${byId[id].t}: ${meta}`; }
+}
+function flowEdge(src, dst, count, label) {
+  const e = edgeEls[`${src}->${dst}`]; if (!e) return;
+  e.n += count || 1; e.p.classList.add("active", "done");
+  clearTimeout(e.t); e.t = setTimeout(() => e.p.classList.remove("active"), 900);
+  const L = e.p.getTotalLength(), pt = e.p.getPointAtLength(L * .5);
+  const txt = String(e.n), w = 12 + txt.length * 7;
+  e.lg.style.display = ""; e.lg.setAttribute("transform", `translate(${pt.x - w / 2},${pt.y - 8})`);
+  e.lg.querySelector("rect").setAttribute("width", w); const t = e.lg.querySelector("text"); t.setAttribute("x", w / 2); t.textContent = txt;
+}
+function logLine(e) {
+  const d = new Date(e.ts * 1000).toLocaleTimeString();
+  let msg = e.summary || e.error || "";
+  if (e.status === "step") msg = `${e.portfolio} step ${e.step}` + (e.usage && e.usage.total_tokens ? ` · ${e.usage.total_tokens} tok` : "");
+  if (e.node === "tools") msg = `${e.portfolio} → ${e.tool}(${JSON.stringify(e.args)})`;
+  if (e.status === "reject") msg = `${e.portfolio} assessment REJECTED: ${e.problems.join("; ")}`;
+  if (e.node === "run" && e.summary && typeof e.summary === "object") msg = JSON.stringify(e.summary);
+  if (e.node === "run" && e.status === "start") msg = `trigger=${e.trigger} mode=${e.mode} llm=${e.llm} as_of=${e.as_of.slice(0, 10)}`;
+  const div = document.createElement("div");
+  div.className = "l" + (e.status === "error" || e.status === "reject" ? " err" : "") + (e.node === "human" ? " h" : "");
+  div.innerHTML = `<span class="ts">${d}</span>  <span class="nd">${esc(e.node.padEnd(14))}</span> ${esc(e.status.padEnd(6))} ${esc(msg)}`;
+  const log = $("#log"); log.appendChild(div); log.scrollTop = log.scrollHeight;
+}
+function applyEvent(e) {
+  run.events.push(e); run.seq = Math.max(run.seq, e.seq);
+  (run.byNode[e.node] = run.byNode[e.node] || []).push(e);
+  if (e.node === "run") {
+    if (e.status === "start") run.meta = e;
+    else { run.done = e; refreshSide(); loadRuns(); }
+    renderRunHead();
+    if (e.status !== "start") logLine(e);
+    return;
+  }
+  if (e.status === "flow") { flowEdge(e.src, e.node, e.count, e.label); if (!run.counts[e.node]) setNode(e.node, "idle-dim"); return; }
+  if (e.status === "start") { setNode(e.node, "running"); return; }
+  if (e.status === "end") { run.counts[e.node] = (run.counts[e.node] || 0) + 1; setNode(e.node, e.node === "fallback" ? "warn" : "success", e.summary); logLine(e); }
+  if (e.status === "error") { setNode(e.node, "error", e.error); logLine(e); }
+  if (e.status === "step" || e.status === "reject") logLine(e);
+  if (e.node === "human") refreshSide();
+  if (selected === e.node) renderNode();
+}
+function renderRunHead() {
+  if (!run) return;
+  const m = run.meta || {}, d = run.done;
+  let st = d ? (d.status === "end" ? `<span class="pill ok">finished</span>` : `<span class="pill err">${esc(typeof d.summary === "string" ? d.summary : "stopped")}</span>`) : `<span class="pill warn">checking…</span>`;
+  let sum = d && d.summary && typeof d.summary === "object" ? ` · ${d.summary.findings} issues found · ${d.summary.emails} emails · ${d.summary.queued} waiting for you` : "";
+  const trig = { manual: "Started by you", schedule: "Daily check", webhook: "New update received" }[m.trigger] || "Check";
+  $("#runhead").innerHTML = `<b style="font-family:inherit">${esc(trig)}</b> ${st} <span>${esc(PLAIN.when(m.ts ? new Date(m.ts * 1000).toISOString() : ""))}${sum}</span> <a href="/audit?run=${encodeURIComponent(run.id)}" target="_top">full history →</a>`;
+}
+let pollTimer = null, replayTimer = null;
+async function openRun(id, live) {
+  clearInterval(pollTimer); clearTimeout(replayTimer);
+  run = { id, seq: 0, events: [], byNode: {}, counts: {}, meta: null, done: null };
+  resetCanvas(); renderRunHead();
+  $("#runSel").value = id;
+  if (!live) { const evs = await api(`/api/runs/${id}`); evs.forEach(applyEvent); }
+  pollTimer = setInterval(async () => { if (!run || run.id !== id || run.replaying) return; try { (await api(`/api/runs/${id}?since=${run.seq}`)).forEach(applyEvent); } catch (_) {} }, 500);
+}
+async function replay() {
+  if (!run) return;
+  const evs = run.events.slice(), id = run.id;
+  run = { id, seq: 0, events: [], byNode: {}, counts: {}, meta: null, done: null, replaying: true }; resetCanvas();
+  let i = 0;
+  const step = () => { if (!run || run.id !== id) return; if (i >= evs.length) { run.replaying = false; return; }
+    const e = evs[i++]; applyEvent(e); replayTimer = setTimeout(step, e.status === "flow" ? 260 : e.status === "start" ? 120 : 60); };
+  step();
+}
+
+/* ---------- side panel ---------- */
+let tab = "node", selected = null;
+let panelOpen = false;
+function openPanel(t) {
+  if (t) tab = t;
+  panelOpen = true; $(".panel").classList.add("open");
+  document.querySelectorAll(".nav .tab").forEach(x => x.classList.toggle("on", x.dataset.t === tab));
+}
+function closePanel() {
+  panelOpen = false; $(".panel").classList.remove("open");
+  document.querySelectorAll(".nav .tab").forEach(x => x.classList.remove("on"));
+}
+document.querySelectorAll(".nav .tab").forEach(t => t.onclick = () => {
+  if (panelOpen && tab === t.dataset.t) return closePanel();
+  openPanel(t.dataset.t); refreshSide();
+});
+$("#pclose").onclick = closePanel;
+addEventListener("keydown", e => { if (e.key === "Escape" && panelOpen) closePanel(); });
+$("#canvas").addEventListener("click", e => { if (!e.target.closest(".node")) { selected = null; Object.values(nodeEls).forEach(n => n.classList.remove("sel")); if (tab === "node") renderNode(); } });
+function selectNode(id) {
+  selected = id; Object.entries(nodeEls).forEach(([k, n]) => n.classList.toggle("sel", k === id));
+  openPanel("node"); renderNode();
+}
+const DESCR = {
+  trigger: "A check starts every day at the time set in Settings, whenever a manager submits or edits an update, or when you press Check now.",
+  load_data: "Reads every portfolio's monthly updates. If the data can't be read, the check stops safely and nothing is sent.",
+  load_overrides: "Applies the exceptions you've made (for example, an agreed extension) and remembers your past decisions.",
+  rules: "Applies BNH's standard reporting rules: deadlines, Red/Amber explanations, repeated problems, and long-running Red status.",
+  llm_agent: "The AI reads each portfolio's updates like an analyst would, double-checks the rule results, and spots things rules can't, such as a 'Green' status next to bad news.",
+  tools: "The AI can only look up that one portfolio's past updates and your past decisions. It can't change anything or send anything.",
+  validate: "Every fact the AI quotes is checked against the actual records. If it doesn't match, the AI's point is set aside for you to review.",
+  fallback: "If the AI is unavailable, the standard rules still run, and anything needing judgement waits for you.",
+  policy: "Decides what happens to each issue: act automatically (only for clear, low-risk cases), ask you first, or skip it because it was already handled.",
+  send_email: "Sends reminders to portfolio managers and alerts to you, batched into one email per person.",
+  console: "Writes a short summary of what this check found and did.",
+  review_queue: "Anything the assistant isn't sure about, or that is serious, waits here for your decision.",
+  audit: "Every step and decision is recorded in a tamper-proof history.",
+  human: "Your approvals send the held emails. When you decline or correct something, the assistant remembers it next time.",
+};
+function decisionsTable(ds) {
+  return ds.map(d => { const f = d.finding; return `<div class="card" style="background:var(--panel)">
+    <div class="h"><b>${esc(f.portfolio_name || f.portfolio_id)}</b><span class="d ${d.decision}">${esc(PLAIN.decision(d.decision))}</span></div>
+    <div>${esc(PLAIN.rule(f.rule_id))} <span class="k">· ${esc(PLAIN.month(f.reporting_month))}</span></div>
+    <div class="k" style="margin-top:4px">${esc(PLAIN.action(d.action_type))}: ${esc(PLAIN.why(d.reason))}</div></div>`; }).join("");
+}
+function findingsTable(fs) {
+  return fs.map(f => `<div class="card" style="background:var(--panel)">
+    <div class="h"><b>${esc(f.portfolio_name || f.portfolio_id)}</b><span class="sev ${f.severity}">${esc(PLAIN.severity(f.severity))}</span></div>
+    <div>${esc(PLAIN.rule(f.rule_id))} <span class="k">· ${esc(PLAIN.month(f.reporting_month))}</span></div>
+    <div class="k" style="margin-top:4px">${esc(f.rationale)}</div>
+    ${f.llm_note ? `<div class="note" style="margin-top:6px">AI: ${esc(f.llm_note)}</div>` : ""}
+    ${f.grounded === false ? `<div class="why">The AI's evidence didn't match the records.</div>` : ""}</div>`).join("");
+}
+function renderNode() {
+  $("#phead").textContent = PANEL_TITLES["node"];
+  const b = $("#pbody");
+  if (!selected) { b.innerHTML = `<div class="empty">Click any step on the diagram to see what it did.</div>` + nodeListHelp(); return; }
+  const n = byId[selected], evs = (run && run.byNode[selected] || []).filter(e => e.status !== "flow");
+  let h = `<div class="card"><div class="h"><b>${n.ic} ${n.t}</b><span class="pill">ran ${evs.filter(e => e.status === "end").length}×</span></div><div class="k">${esc(DESCR[selected])}</div></div>`;
+  if (!evs.length) return b.innerHTML = h + `<div class="empty">This step wasn't needed in this check.</div>`;
+  for (const e of evs) {
+    if (e.status === "start") continue;
+    let body = "";
+    if (e.decisions) body += decisionsTable(e.decisions);
+    else if (e.findings) body += findingsTable(e.findings);
+    if (e.assessment && e.assessment.summary) body += `<div class="note">AI summary: ${esc(e.assessment.summary)}</div>`;
+    if (e.emails) body += e.emails.map(m => `<details><summary>✉️ ${esc(PLAIN.emailKind(m.kind))} to ${esc(m.to || m.to_email)} · ${esc(PLAIN.delivery(m.status))}</summary><pre>${esc(m.body)}</pre></details>`).join("");
+    if (e.problems) body += `<div class="why">The AI's answer was rejected and it was asked to fix it.</div>`;
+    const tech = {};
+    for (const k of ["assessment", "tool_calls", "report", "result_preview", "overrides", "item", "problems", "text", "usage", "model", "steps", "error"]) if (e[k] != null && e[k] !== "") tech[k] = e[k];
+    if (Object.keys(tech).length) body += `<details><summary class="k">Technical details</summary><pre>${esc(JSON.stringify(tech, null, 2))}</pre></details>`;
+    if (e.status === "step") continue;  // individual AI steps are technical; they're in the technical log
+    h += `<div class="card"><div class="h"><span>${esc(e.portfolio_name || e.portfolio || "")}${e.portfolio ? " · " : ""}${esc(e.summary || e.error || e.status)}</span></div>${body}</div>`;
+  }
+  b.innerHTML = h;
+}
+function nodeListHelp() {
+  return `<div class="card"><b>How to read this</b><p class="k">A check flows from left to right. Green steps are finished, orange is happening now. The numbers on the lines show how many items passed through. Purple dashed lines are where your decisions come in.</p></div>`;
+}
+async function renderReview() {
+  $("#phead").textContent = PANEL_TITLES["review"];
+  const [items, disputes] = await Promise.all([api("/api/review"), api("/api/disputes")]), b = $("#pbody");
+  const openD = disputes.filter(d => d.status === "OPEN"), doneD = disputes.filter(d => d.status !== "OPEN").slice(0, 5);
+  const dHtml = `<h3 style="padding-left:0">PM disputes (${openD.length} open)</h3>` + (openD.concat(doneD).map(d => `
+    <div class="card" style="${d.status === "OPEN" ? "border-color:rgba(30,74,138,.5)" : "opacity:.6"}">
+      <div class="h"><b>${esc(d.portfolio_id)} · ${rid(d.rule_id)} · ${esc(d.reporting_month)}</b><span class="d ${d.status === "OPEN" ? "shadow" : d.status === "UPHELD" ? "execute" : "log"}">${esc(d.status)}</span></div>
+      <p class="note">PM (${esc(d.raised_by_email)}): ${esc(d.message)}</p>
+      <div class="k">${esc(d.id)} · finding ${esc(d.fingerprint)} · ${esc(d.created_at.slice(0, 16).replace("T", " "))}</div>
+      ${d.status === "OPEN" ? `<input type="text" id="dn-${d.id}" placeholder="Note to the PM (required to deny)" style="width:100%;margin-top:8px">
+      <div class="row"><button class="btn sm ok" onclick="decideDispute('${d.id}','uphold')">Uphold · finding was wrong</button>
+      <button class="btn sm err" onclick="decideDispute('${d.id}','deny')">Deny</button></div>` : `<div class="k">by ${esc(d.decided_by)}${d.decision_note ? " — " + esc(d.decision_note) : ""}</div>`}
+    </div>`).join("") || `<div class="empty" style="padding:8px">No disputes.</div>`) + `<h3 style="padding-left:0">Held actions</h3>`;
+  if (!items.length) return b.innerHTML = dHtml + `<div class="empty">Nothing waiting for a human.</div>`;
+  b.innerHTML = dHtml + items.map(i => { const f = i.finding, pend = i.status === "pending"; return `
+    <div class="card" style="${pend ? "" : "opacity:.6"}">
+      <div class="h"><b>${esc(f.portfolio_name)}</b><span class="d ${pend ? "queue" : i.status === "approved" ? "execute" : "log"}">${esc(i.status)}</span></div>
+      <div><span class="sev ${f.severity}">${f.severity}</span> ${esc(f.title)} <span class="k">· ${esc(f.reporting_month)} · conf ${(+f.confidence).toFixed(2)} · ${esc(f.source)}</span></div>
+      <p class="k">${esc(f.rationale)}</p>
+      ${f.llm_note ? `<div class="note">Agent: ${esc(f.llm_note)}</div>` : ""}
+      <p class="why">Held because: ${esc(i.reason)}</p>
+      <div class="k">Proposed: <b>${esc(i.action_type)}</b> → ${esc(i.recipient)} · ${esc(i.id)} · fp ${esc(f.fingerprint)}</div>
+      ${pend ? `<input type="text" id="note-${i.id}" placeholder="Reviewer note (saved as precedent)" style="width:100%;margin-top:8px">
+      <div class="row"><button class="btn sm ok" onclick="decideRev('${i.id}','approve')">Approve & send</button>
+      <button class="btn sm" onclick="decideRev('${i.id}','reject')">Reject</button>
+      <button class="btn sm err" onclick="decideRev('${i.id}','reject',true)">Reject · false positive</button></div>`
+      : `<div class="k">by ${esc(i.decided_by)} at ${esc(i.decided_at)}${i.note ? " — " + esc(i.note) : ""}</div>`}
+    </div>`; }).join("");
+}
+async function decideDispute(id, decision) {
+  const note = ($("#dn-" + id) || {}).value || "";
+  try { await post(`/api/disputes/${id}`, { decision, note }); } catch (e) { alert(e.message); }
+  refreshSide();
+}
+async function renderUsers() {
+  $("#phead").textContent = PANEL_TITLES["users"];
+  const d = await api("/api/users"), b = $("#pbody");
+  const pms = d.users.filter(u => u.role === "PM" && u.status === "ACTIVE");
+  b.innerHTML = `
+    <div class="card"><b>Add a user</b><div class="k">They sign in with a code emailed to this address.</div>
+      <label class="f">Name</label><input type="text" id="uN">
+      <label class="f">Email</label><input type="text" id="uE" placeholder="name@company.com">
+      <label class="f">Role</label><select id="uR"><option value="PM">PM: sees own portfolios, can dispute</option><option value="COS">CoS: full console</option></select>
+      <div class="row"><button class="btn sm primary" onclick="addUser()">Add user</button><span class="k" id="uMsg"></span></div></div>
+    <h3 style="padding-left:0">Portfolio ownership</h3>
+    <div class="card"><table>${d.portfolios.map(p => `<tr><td><b>${esc(p.id)}</b> ${esc(p.name)}</td><td><select onchange="assignPm('${p.id}', this.value)"><option value="">— no PM —</option>${pms.map(u => `<option value="${u.id}" ${u.id === p.pm_user_id ? "selected" : ""}>${esc(u.name)}</option>`).join("")}</select></td></tr>`).join("")}</table></div>
+    <h3 style="padding-left:0">Accounts</h3>
+    ${d.users.map(u => `<div class="card" style="${u.status === "ACTIVE" ? "" : "opacity:.55"}"><div class="h"><b>${esc(u.name)}</b><span class="d ${u.role === "COS" ? "execute" : "shadow"}">${u.role}</span></div>
+      <div class="k">${esc(u.email)} · ${esc(u.status)}</div>
+      <div class="k">Last sign-in: ${u.last_login_at ? esc(u.last_login_at.slice(0, 16).replace("T", " ")) + " from " + esc(u.last_login_ip || "?") : "never"}</div>
+      <div class="row">${u.status === "ACTIVE" ? `<button class="btn sm err" onclick="setStatus('${u.id}','DEACTIVATED')">Deactivate & sign out</button>` : `<button class="btn sm" onclick="setStatus('${u.id}','ACTIVE')">Reactivate</button>`}</div></div>`).join("")}
+    <h3 style="padding-left:0">Sign-in activity</h3>
+    <div class="card"><table><tr><th>When</th><th>Event</th><th>Email · IP</th></tr>${d.auth_events.map(e => `<tr><td class="k">${esc(e.ts.slice(5, 16).replace("T", " "))}</td><td>${esc(e.event)}</td><td>${esc(e.email || "")}<div class="k" style="font-family:var(--mono)">${esc(e.ip || "")}</div></td></tr>`).join("")}</table></div>`;
+}
+async function addUser() {
+  try { await post("/api/users", { name: $("#uN").value, email: $("#uE").value, role: $("#uR").value }); renderUsers(); }
+  catch (e) { $("#uMsg").textContent = e.message; }
+}
+async function assignPm(pid, uid) { try { await post(`/api/portfolios/${pid}`, { pm_user_id: uid || null }); } catch (e) { alert(e.message); renderUsers(); } }
+async function setStatus(uid, status) { try { await post(`/api/users/${uid}`, { status }); } catch (e) { alert(e.message); } renderUsers(); }
+async function decideRev(id, decision, dismiss) {
+  const note = ($("#note-" + id) || {}).value || "";
+  try { await post(`/api/review/${id}`, { decision, note, dismiss: !!dismiss }); } catch (e) { alert(e.message); }
+  refreshSide();
+}
+async function renderOutbox() {
+  $("#phead").textContent = PANEL_TITLES["outbox"];
+  const msgs = await api("/api/outbox"), b = $("#pbody");
+  const st = { sent: "execute", simulated: "log", console: "log", failed: "queue" };
+  b.innerHTML = msgs.length ? msgs.map(m => `<div class="card"><div class="h"><b>${esc(m.to_email)}</b><span class="d ${st[m.status] || "log"}">${esc(m.status)}${m.delivery === "redirect" ? " · redirected" : ""}</span></div><div>${esc(m.subject)}</div><div class="k">${esc(m.kind)} · ${esc(m.ts.slice(0, 19).replace("T", " "))}${m.intended_to ? " · intended for " + esc(m.intended_to) : ""}${m.provider_id ? " · Resend " + esc(m.provider_id) : ""}</div>${m.error ? `<div class="why">${esc(m.error)}</div>` : ""}<details><summary class="k">body</summary><pre>${esc(m.body)}</pre></details></div>`).join("")
+    : `<div class="empty">No simulated emails yet.</div>`;
+}
+const RULES = ["MISSING_SUBMISSION", "DUE_SOON", "LATE_SUBMISSION", "WEAK_BLOCKER", "STALE_BLOCKER", "PERSISTENT_RED", "CASH_RAG_INCONSISTENT", "SUSPICIOUS_CONTENT", "NARRATIVE_RAG_MISMATCH", "*"];
+async function renderOverrides(prefillFp) {
+  $("#phead").textContent = PANEL_TITLES["ovr"];
+  const ovr = await api("/api/overrides"), b = $("#pbody");
+  b.innerHTML = `
+    <div class="card"><b>Suppress a rule</b><div class="k">Stop the agent acting on a rule for a portfolio (e.g. an agreed extension).</div>
+      <label class="f">Portfolio</label><select id="sP">${PORTFOLIOS.map(p => `<option>${p}</option>`).join("")}<option>*</option></select>
+      <label class="f">Rule</label><select id="sR">${RULES.map(r => `<option>${r}</option>`).join("")}</select>
+      <label class="f">Reporting month (YYYY-MM or *)</label><input type="text" id="sM" value="*">
+      <label class="f">Until</label><input type="date" id="sU">
+      <label class="f">Reason</label><input type="text" id="sW" placeholder="Required">
+      <div class="row"><button class="btn sm primary" onclick="addSuppress()">Add suppression</button></div></div>
+    <div class="card" id="dismissCard"><b>Dismiss a finding (false positive / PM dispute upheld)</b>
+      <label class="f">Finding fingerprint</label><input type="text" id="dF" value="${esc(prefillFp || "")}" placeholder="e.g. e8e8125b7a99">
+      <label class="f">Reason</label><input type="text" id="dW" placeholder="Required">
+      <div class="row"><button class="btn sm primary" onclick="addDismiss()">Dismiss</button></div></div>
+    <h3 style="padding-left:0">History</h3>
+    ${ovr.map(o => `<div class="card"><div class="h"><b>${esc(o.type)}</b><span class="k">${esc((o.created_at || "").slice(0, 16))}</span></div><div class="k">${esc([o.portfolio_id, o.rule_id, o.reporting_month, o.fingerprint, o.severity, o.until && "until " + o.until].filter(Boolean).join(" · "))}</div><div>${esc(o.reason || "")}</div><div class="k">by ${esc(o.by)}</div></div>`).join("")}`;
+  const u = new Date(Date.now() + 30 * 864e5); $("#sU").value = u.toISOString().slice(0, 10);
+  if (prefillFp) $("#dW").focus();
+}
+async function addSuppress() {
+  const reason = $("#sW").value.trim(); if (!reason) return alert("Reason is required (it is shown to the agent as a precedent).");
+  await post("/api/overrides", { type: "SUPPRESS", portfolio_id: $("#sP").value, rule_id: $("#sR").value, reporting_month: $("#sM").value || "*", until: $("#sU").value, reason });
+  renderOverrides();
+}
+async function addDismiss() {
+  const fp = $("#dF").value.trim(), reason = $("#dW").value.trim(); if (!fp || !reason) return alert("Fingerprint and reason are required.");
+  await post("/api/overrides", { type: "DISMISS", fingerprint: fp, reason }); renderOverrides();
+}
+async function updateBadge() {
+  const [items, disp] = await Promise.all([api("/api/review"), api("/api/disputes")]);
+  const n = items.filter(i => i.status === "pending").length + disp.filter(d => d.status === "OPEN").length;
+  $("#revN").style.display = n ? "" : "none"; $("#revN").textContent = n;
+}
+async function refreshSide() {
+  $("#phead").textContent = PANEL_TITLES[tab] || "";
+  try {
+    await updateBadge();
+    if (!panelOpen) return;
+    if (tab === "node") renderNode(); else if (tab === "review") renderReview(); else if (tab === "outbox") renderOutbox(); else if (tab === "ovr") renderOverrides(); else if (tab === "users") renderUsers();
+  } catch (e) { console.error(e); }
+}
+
+/* ---------- header controls ---------- */
+let RUNS = [];
+$("#runSel").onchange = e => e.target.value && openRun(e.target.value, false);
+let PORTFOLIOS = ["P01", "P02", "P03", "P04", "P05", "P06", "P07", "P08"];
+$("#hookP").innerHTML = PORTFOLIOS.map(p => `<option>${p}</option>`).join("");
+async function loadStatus() {
+  const s = await api("/api/status");
+  $("#keyPill").className = "pill " + (s.has_openrouter_key ? "ok" : "warn");
+  $("#keyPill").textContent = s.has_openrouter_key ? "OpenRouter ✓" : "No OpenRouter key"; $("#keyPill").title = s.model;
+  $("#keyPill").textContent = s.has_openrouter_key ? s.model.split("/").pop() : "No OpenRouter key";
+  $("#llm").querySelector('[value=openrouter]').disabled = !s.has_openrouter_key;
+  $("#dbPill").textContent = s.db.startsWith("Postgres") ? "Neon Postgres" : s.db; $("#dbPill").title = s.db; $("#dbPill").className = "pill ok";
+  $("#mailPill").className = "pill " + (s.agent_email === "simulated" ? "" : "warn");
+  $("#mailPill").textContent = s.agent_email + (s.redirect_to ? " → " + s.redirect_to : "");
+  $("#mailPill").title = `Agent compliance emails: ${s.agent_email}. Sign-in emails: ${s.resend ? "Resend" : "console only"}.`;
+  $("#pausePill").className = "pill " + (s.paused ? "err" : "ok"); $("#pausePill").textContent = s.paused ? "PAUSED (kill switch)" : "Agent active";
+  $("#pauseBtn").textContent = s.paused ? "Resume" : "Pause"; $("#pauseBtn").dataset.p = s.paused ? "1" : "";
+  return s;
+}
+async function loadRuns() {
+  const runs = await api("/api/runs");
+  RUNS = runs;
+  $("#runSel").innerHTML = runs.length ? runs.map(r => { const s = r.started || {}, f = r.finished; const st = !f ? "⏳" : f.status === "end" ? "✓" : "✗";
+    const when = s.ts ? new Date(s.ts * 1000).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : r.run_id.slice(4, 17);
+    const trig = { manual: "by you", schedule: "daily", webhook: "new update" }[s.trigger] || s.trigger || "";
+    return `<option value="${r.run_id}">${st} ${esc(when)} · ${esc(trig)}${s.portfolios && s.portfolios !== "all" ? " · " + esc(s.portfolios) : ""}</option>`; }).join("") : `<option value="">No checks yet</option>`;
+  if (run) $("#runSel").value = run.id;
+}
+$("#runBtn").onclick = async () => {
+  $("#runBtn").disabled = true;
+  try { const r = await post("/api/runs", { llm: $("#llm").value, mode: $("#mode").value, as_of: $("#asof").value, delay: 0.35 }); await loadRuns(); openRun(r.run_id, true); }
+  catch (e) { alert(e.message); } finally { setTimeout(() => $("#runBtn").disabled = false, 1500); }
+};
+$("#hookBtn").onclick = async () => { const r = await post("/api/webhook/test", { portfolio_id: $("#hookP").value, as_of: $("#asof").value, llm: $("#llm").value }); await loadRuns(); openRun(r.run_id, true); };
+$("#pauseBtn").onclick = async () => { const p = $("#pauseBtn").dataset.p; const reason = p ? "" : prompt("Reason for pausing the agent?", "Investigating a bad assessment"); if (!p && reason === null) return;
+  await post("/api/overrides", { type: p ? "RESUME" : "PAUSE", reason: reason || "" }); loadStatus(); if (tab === "ovr") renderOverrides(); };
+$("#resetBtn").onclick = async () => { if (!confirm("Clear all runs, emails, review items and overrides (seed override is restored)?")) return; await post("/api/reset"); run = null; resetCanvas(); $("#runhead").innerHTML = "State cleared."; loadRuns(); loadStatus(); refreshSide(); };
+$("#fitBtn").onclick = fit; $("#replayBtn").onclick = replay;
+
+/* ---------- boot ---------- */
+buildCanvas(); fit(); addEventListener("resize", fit);
+$("#asof").value = new Date().toISOString().slice(0, 10);
+(async () => {
+  const me = await api("/api/me"); $("#mePill").textContent = me.name; $("#meEmail").textContent = me.email;
+  $("#meEmail").title = `last sign-in from ${me.last_login_ip || "?"}`;
+  $("#logoutBtn").onclick = async () => { await post("/api/auth/logout"); location.href = "/login"; };
+  await loadStatus(); await loadRuns(); renderNode();
+  const hr = location.hash.match(/run=([\w-]+)/);
+  if (hr) openRun(hr[1], true); else if (RUNS.length) openRun(RUNS[0].run_id, false);
+  $("#logToggle").onclick = () => { document.body.classList.toggle("showlog"); setTimeout(fit, 50); };
+  addEventListener("hashchange", () => { const h = location.hash.match(/run=([\w-]+)/); if (h) { loadRuns(); openRun(h[1], true); } });
+  const nh = location.hash.match(/node=(\w+)/); if (nh) setTimeout(() => selectNode(nh[1]), 600);
+  const th = location.hash.match(/tab=(\w+)/); if (th) { openPanel(th[1]); refreshSide(); }
+  const m = location.hash.match(/dispute=([\w,]+)/);
+  if (m) { openPanel("ovr"); renderOverrides(m[1].split(",")[0]); }
+  setInterval(() => { loadStatus(); if (panelOpen && (tab === "review" || tab === "outbox")) refreshSide(); else updateBadge(); }, 4000);
+})();
+</script>
+</body>
+</html>

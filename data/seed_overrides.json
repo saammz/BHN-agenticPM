@@ -1,0 +1,13 @@
+[
+  {
+    "id": "OVR-SEED-1",
+    "type": "SUPPRESS",
+    "portfolio_id": "P04",
+    "rule_id": "LATE_SUBMISSION",
+    "reporting_month": "2026-09",
+    "until": "2027-01-31",
+    "reason": "CoS granted Ibrahim Musa a 5-day extension for Sep 2026 (audit timing).",
+    "by": "cos@bnh.example",
+    "created_at": "2026-10-09T10:00:00+01:00"
+  }
+]

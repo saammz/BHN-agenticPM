@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en-NG">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Confirm sign-in · BNH Compliance</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/bnh.css">
+</head>
+<body>
+<div class="auth"><div class="box">
+  <div class="brandrow"><span class="brand dark"><span class="mark" aria-hidden="true">BNH</span><span class="name"><b>Compliance Assistant</b><small>System 3 · Reporting oversight</small></span></span></div>
+  <div class="panel">
+    <h1>Confirm sign-in</h1>
+    <p class="lead">Continue to sign in on this device. This link can only be used once.</p>
+    <button class="btn primary" id="go" style="width:100%">Continue</button>
+    <div class="alert danger" id="err" role="alert" style="display:none;margin:16px 0 0"><div class="t"></div></div>
+  </div>
+  <p class="note">Authorised BNH personnel only. Every sign-in is logged with its IP address and device.</p>
+</div></div>
+<script>
+const token = new URLSearchParams(location.search).get("token") || "";
+history.replaceState(null, "", "/auth/link");
+document.getElementById("go").onclick = async () => {
+  const r = await fetch("/api/auth/link", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token }) });
+  const j = await r.json().catch(() => ({}));
+  if (r.ok) return location.replace("/");
+  const e = document.getElementById("err"); e.style.display = "flex";
+  e.querySelector(".t").innerHTML = (j.error || "Sign-in failed.").replace(/[<>&]/g, "") + ' <a href="/login">Request a new code</a>';
+};
+</script>
+</body>
+</html>

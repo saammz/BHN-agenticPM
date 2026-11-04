@@ -1,0 +1,24 @@
+# Secrets: never commit. Copy .env.example to .env and fill it in.
+.env
+.env.*
+!.env.example
+
+# Local runtime data (run traces, SQLite dev database)
+state/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Tooling / OS
+.vercel/
+.DS_Store
+.idea/
+.vscode/

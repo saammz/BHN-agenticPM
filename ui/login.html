@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en-NG">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign in · BNH Compliance</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/bnh.css">
+<style>
+  input.code { font: 600 24px/1 var(--font-mono); letter-spacing: 10px; text-align: center; height: 52px; }
+  .stack > * + * { margin-top: 20px; }
+  .linkbtn { background: none; border: 0; padding: 0; color: var(--accent); font-size: 13px; font-weight: 500; cursor: pointer; }
+  .linkbtn:hover { text-decoration: underline; }
+  .links { display: flex; justify-content: space-between; margin-top: 16px; }
+  .ip { font-family: var(--font-mono); font-size: 13px; color: var(--fg); background: var(--surface-muted); border: 1px solid var(--line); border-radius: 4px; padding: 1px 6px; }
+  .alert { margin: 0; } [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="auth"><div class="box">
+  <div class="brandrow"><span class="brand dark"><span class="mark" aria-hidden="true">BNH</span><span class="name"><b>Compliance Assistant</b><small>System 3 · Reporting oversight</small></span></span></div>
+  <div class="panel">
+    <form id="f1" class="stack" novalidate>
+      <div><h1>Sign in</h1><p class="lead" style="margin-bottom:0">Enter your BNH email address. We will send you a one-time sign-in code.</p></div>
+      <div class="field" style="margin:0"><label class="flabel" for="email">Email</label><input id="email" type="email" autocomplete="username" required autofocus></div>
+      <div class="alert danger" id="m1" role="alert" hidden><div class="t"></div></div>
+      <button class="btn primary" id="b1" style="width:100%">Email me a sign-in code</button>
+    </form>
+    <form id="f2" class="stack" novalidate hidden>
+      <div><h1>Check your email</h1><p class="lead" style="margin-bottom:0">If <b id="who"></b> has an account, a 6-digit code is on its way. It expires in 10 minutes.</p></div>
+      <div class="alert info"><div class="t">The email shows the IP address this request came from: <span class="ip" id="ip"></span>. If it does not match, do not use the code.</div></div>
+      <div class="field" style="margin:0"><label class="flabel" for="code">Sign-in code</label><input id="code" class="code" inputmode="numeric" autocomplete="one-time-code" maxlength="7" required></div>
+      <div class="alert danger" id="m2" role="alert" hidden><div class="t"></div></div>
+      <button class="btn primary" id="b2" style="width:100%">Sign in</button>
+      <div class="links"><button type="button" class="linkbtn" id="back">Use a different email</button><button type="button" class="linkbtn" id="resend">Send a new code</button></div>
+    </form>
+  </div>
+  <p class="note">Authorised BNH personnel only. Every sign-in is logged with its IP address and device.</p>
+</div></div>
+<script>
+const $ = s => document.querySelector(s);
+const next = (() => { const n = new URLSearchParams(location.search).get("next") || "/"; return n.startsWith("/") && !n.startsWith("//") ? n : "/"; })();
+async function post(url, body) {
+  const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || "Something went wrong. Please try again.");
+  return j;
+}
+function msg(el, text, tone) { el.hidden = !text; el.className = "alert " + (tone || "danger"); el.querySelector(".t").textContent = text || ""; }
+async function requestCode() {
+  const email = $("#email").value.trim();
+  $("#b1").disabled = true; msg($("#m1"), "");
+  try {
+    const j = await post("/api/auth/request", { email });
+    $("#who").textContent = email; $("#ip").textContent = j.ip;
+    $("#f1").hidden = true; $("#f2").hidden = false; $("#code").value = ""; $("#code").focus();
+    return true;
+  } catch (e) { msg($("#m1"), e.message); msg($("#m2"), e.message); return false; }
+  finally { $("#b1").disabled = false; }
+}
+$("#f1").onsubmit = e => { e.preventDefault(); requestCode(); };
+$("#f2").onsubmit = async e => {
+  e.preventDefault(); $("#b2").disabled = true;
+  try { await post("/api/auth/verify", { email: $("#email").value.trim(), code: $("#code").value }); location.replace(next); }
+  catch (err) { msg($("#m2"), err.message); $("#code").select(); }
+  finally { $("#b2").disabled = false; }
+};
+$("#back").onclick = () => { $("#f2").hidden = true; $("#f1").hidden = false; $("#email").focus(); };
+$("#resend").onclick = async () => { if (await requestCode()) msg($("#m2"), "A new code is on its way. Earlier codes no longer work.", "success"); };
+fetch("/api/me").then(r => { if (r.ok) location.replace(next); });
+</script>
+</body>
+</html>
